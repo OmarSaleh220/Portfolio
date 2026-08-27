@@ -1,0 +1,285 @@
+{
+  "company": {
+    "name": "Omar Saleh",
+    "activity": "",
+    "phone": "",
+    "address": "",
+    "taxId": "",
+    "currency": "ج.م"
+  },
+  "users": [
+    {
+      "id": "cfn8s8ge",
+      "username": "Omar Saleh",
+      "password": "omar2024",
+      "fullName": "Omar Saleh",
+      "role": "admin"
+    }
+  ],
+  "accounts": [
+    {
+      "id": "a1",
+      "code": "1",
+      "name": "الأصول",
+      "type": "root",
+      "parentId": null
+    },
+    {
+      "id": "a1-1",
+      "code": "1-1",
+      "name": "الخزينة (نقدية)",
+      "type": "asset",
+      "parentId": "a1",
+      "balance": 0,
+      "editable": true
+    },
+    {
+      "id": "a1-2",
+      "code": "1-2",
+      "name": "البنك",
+      "type": "asset",
+      "parentId": "a1",
+      "balance": 0,
+      "editable": true
+    },
+    {
+      "id": "a1-3",
+      "code": "1-3",
+      "name": "عملاء (ذمم مدينة)",
+      "type": "asset",
+      "parentId": "a1",
+      "balance": 0,
+      "editable": false
+    },
+    {
+      "id": "a1-4",
+      "code": "1-4",
+      "name": "أجهزة ومعدات",
+      "type": "asset",
+      "parentId": "a1",
+      "balance": 0,
+      "editable": true
+    },
+    {
+      "id": "a2",
+      "code": "2",
+      "name": "الخصوم",
+      "type": "root",
+      "parentId": null
+    },
+    {
+      "id": "a2-1",
+      "code": "2-1",
+      "name": "موردون (ذمم دائنة)",
+      "type": "liability",
+      "parentId": "a2",
+      "balance": 0,
+      "editable": false
+    },
+    {
+      "id": "a2-2",
+      "code": "2-2",
+      "name": "قروض قصيرة الأجل",
+      "type": "liability",
+      "parentId": "a2",
+      "balance": 0,
+      "editable": true
+    },
+    {
+      "id": "a3",
+      "code": "3",
+      "name": "حقوق الملكية",
+      "type": "root",
+      "parentId": null
+    },
+    {
+      "id": "a3-1",
+      "code": "3-1",
+      "name": "رأس المال",
+      "type": "equity",
+      "parentId": "a3",
+      "balance": 0,
+      "editable": true
+    },
+    {
+      "id": "a3-2",
+      "code": "3-2",
+      "name": "أرباح مرحّلة",
+      "type": "equity",
+      "parentId": "a3",
+      "balance": 0,
+      "editable": true
+    },
+    {
+      "id": "a4",
+      "code": "4",
+      "name": "الإيرادات",
+      "type": "root",
+      "parentId": null
+    },
+    {
+      "id": "a4-1",
+      "code": "4-1",
+      "name": "إيراد المبيعات / الخدمات",
+      "type": "revenue",
+      "parentId": "a4",
+      "balance": 0,
+      "editable": false
+    },
+    {
+      "id": "a4-2",
+      "code": "4-2",
+      "name": "إيرادات أخرى",
+      "type": "revenue",
+      "parentId": "a4",
+      "balance": 0,
+      "editable": false
+    },
+    {
+      "id": "a5",
+      "code": "5",
+      "name": "المصروفات",
+      "type": "root",
+      "parentId": null
+    },
+    {
+      "id": "a5-1",
+      "code": "5-1",
+      "name": "رواتب وأجور",
+      "type": "expense",
+      "parentId": "a5",
+      "balance": 0,
+      "editable": false
+    },
+    {
+      "id": "a5-2",
+      "code": "5-2",
+      "name": "إيجار",
+      "type": "expense",
+      "parentId": "a5",
+      "balance": 0,
+      "editable": false
+    },
+    {
+      "id": "a5-3",
+      "code": "5-3",
+      "name": "اشتراكات وأدوات",
+      "type": "expense",
+      "parentId": "a5",
+      "balance": 0,
+      "editable": false
+    },
+    {
+      "id": "a5-4",
+      "code": "5-4",
+      "name": "تسويق وإعلان",
+      "type": "expense",
+      "parentId": "a5",
+      "balance": 0,
+      "editable": false
+    },
+    {
+      "id": "a5-5",
+      "code": "5-5",
+      "name": "مصروفات متنوعة",
+      "type": "expense",
+      "parentId": "a5",
+      "balance": 0,
+      "editable": false
+    }
+  ],
+  "banks": [],
+  "products": [],
+  "customers": [
+    {
+      "id": "waz5m3gh",
+      "balance": 0,
+      "name": "umar",
+      "phone": "",
+      "email": ""
+    }
+  ],
+  "suppliers": [],
+  "employees": [],
+  "salesInvoices": [
+    {
+      "id": "2txxd9h2",
+      "number": "SI-1002",
+      "date": "2026-08-27",
+      "status": "مدفوعة",
+      "items": [
+        {
+          "id": "i9aedxw2",
+          "desc": "54",
+          "qty": 1,
+          "price": 4114
+        }
+      ],
+      "customerId": "waz5m3gh",
+      "bankId": ""
+    },
+    {
+      "id": "9c38zh4a",
+      "number": "SI-1001",
+      "date": "2026-08-27",
+      "status": "مدفوعة",
+      "items": [
+        {
+          "id": "ebkt9xwg",
+          "desc": "p",
+          "qty": 1,
+          "price": 1000
+        },
+        {
+          "id": "9x3ooqxe",
+          "desc": "pp",
+          "qty": 1,
+          "price": 2500
+        }
+      ],
+      "customerId": "waz5m3gh"
+    }
+  ],
+  "purchaseInvoices": [],
+  "transactions": [
+    {
+      "id": "xy7vv8fx",
+      "date": "2026-08-27",
+      "memo": "ايرادات العملاء ",
+      "currency": "usd",
+      "exchangeRate": 50,
+      "lines": [
+        {
+          "accountId": "a1-2",
+          "debit": "500",
+          "credit": ""
+        },
+        {
+          "accountId": "a1-3",
+          "debit": "",
+          "credit": "500"
+        }
+      ]
+    },
+    {
+      "id": "b2trwpbk",
+      "date": "2026-08-27",
+      "memo": "jwdg",
+      "currency": "local",
+      "lines": [
+        {
+          "accountId": "a1-1",
+          "debit": "2000",
+          "credit": ""
+        },
+        {
+          "accountId": "a1-3",
+          "debit": "",
+          "credit": "2000"
+        }
+      ]
+    }
+  ],
+  "attendance": [],
+  "payrollRuns": []
+}

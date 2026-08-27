@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>نظام الحسابات</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Cairo:wght@600;800&family=Inter:wght@400;600;800&display=swap');
+  body { background:#0B1220; }
+  .font-ar { font-family: 'Tajawal','Cairo','Segoe UI',Tahoma,Arial,sans-serif; }
+  .font-en { font-family: 'Inter','Segoe UI',Arial,sans-serif; }
+  .tabular { font-variant-numeric: tabular-nums; font-family: 'Cairo','Inter',sans-serif; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #223049; border-radius: 8px; }
+
+  @media print {
+    body { background: #fff !important; }
+    .no-print { display: none !important; }
+    .print-area { display: block !important; background: #fff !important; color: #111 !important; padding: 0 !important; margin: 0 !important; }
+    .print-area * { color: #111 !important; background: transparent !important; border-color: #ccc !important; box-shadow: none !important; }
+    .print-area table { width: 100% !important; border-collapse: collapse !important; }
+    .print-area th, .print-area td { border: 1px solid #ccc !important; padding: 6px 8px !important; }
+    .print-only { display: block !important; }
+    .print-overlay { position: static !important; background: #fff !important; backdrop-filter: none !important; padding: 0 !important; display: block !important; }
+  }
+  .print-only { display: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, createContext, useContext } = React;
+
+/* ================= helpers ================= */
+const fmt = (n) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(n || 0));
+const uid = () => Math.random().toString(36).slice(2, 10);
+const today = () => new Date().toISOString().slice(0, 10);
+const nowStamp = () => new Date().toLocaleString();
+
+/* ================= i18n ================= */
+const STRINGS = {
+  nav_dashboard: ["لوحة التحكم", "Dashboard"],
+  nav_accounts: ["شجرة الحسابات", "Chart of Accounts"],
+  nav_transactions: ["المعاملات المالية", "Transactions"],
+  nav_sales: ["فواتير المبيعات", "Sales Invoices"],
+  nav_purchases: ["فواتير المشتريات", "Purchase Invoices"],
+  nav_customers: ["العملاء", "Customers"],
+  nav_suppliers: ["الموردون", "Suppliers"],
+  nav_employees: ["الموظفون", "Employees"],
+  nav_banks: ["البنوك", "Banks"],
+  nav_reports: ["القوائم المالية", "Financial Reports"],
+  nav_settings: ["بيانات الشركة", "Company Settings"],
+  nav_users: ["المستخدمون", "Users"],
+
+  btn_add: ["إضافة", "Add"],
+  btn_save: ["حفظ", "Save"],
+  btn_cancel: ["إلغاء", "Cancel"],
+  btn_delete: ["حذف", "Delete"],
+  btn_edit: ["تعديل", "Edit"],
+  btn_close: ["إغلاق", "Close"],
+  btn_print: ["طباعة", "Print"],
+  btn_printReport: ["طباعة التقرير", "Print report"],
+  btn_login: ["دخول", "Log in"],
+  btn_logout: ["تسجيل الخروج", "Log out"],
+  btn_register: ["إنشاء حساب", "Create account"],
+
+  common_name: ["الاسم", "Name"],
+  common_phone: ["رقم الهاتف", "Phone"],
+  common_email: ["البريد الإلكتروني", "Email"],
+  common_date: ["التاريخ", "Date"],
+  common_status: ["الحالة", "Status"],
+  common_total: ["الإجمالي", "Total"],
+  common_description: ["البيان", "Description"],
+  common_qty: ["الكمية", "Qty"],
+  common_price: ["السعر", "Price"],
+  common_account: ["الحساب", "Account"],
+  common_currency: ["العملة", "Currency"],
+  common_balance: ["الرصيد", "Balance"],
+  common_records: ["سجل", "records"],
+
+  status_paid: ["مدفوعة", "Paid"],
+  status_unpaid: ["غير مدفوعة", "Unpaid"],
+
+  dash_title: ["لوحة التحكم", "Dashboard"],
+  dash_subtitle: ["نظرة عامة على حسابات", "Overview of"],
+  dash_emptyTitle: ["النظام فاضي وجاهز لبيانات شركتك الحقيقية", "The system is empty and ready for your real company data"],
+  dash_emptyBody: ["خطوات البداية المقترحة: (١) راجع «شجرة الحسابات» وسجّل الأرصدة الافتتاحية. (٢) أضف عملاءك وموردينك وبنوك شركتك. (٣) ابدأ تسجيل الفواتير والمعاملات المالية. (٤) راجع «القوائم المالية» في أي وقت.",
+    "Suggested first steps: (1) Review the Chart of Accounts and set opening balances. (2) Add your customers, suppliers and banks. (3) Start recording invoices and transactions. (4) Check Financial Reports any time."],
+  dash_totalSales: ["إجمالي المبيعات", "Total Sales"],
+  dash_totalPurchases: ["إجمالي المشتريات", "Total Purchases"],
+  dash_cash: ["السيولة المتاحة", "Available Cash"],
+  dash_employeesCount: ["عدد الموظفين", "Employees"],
+  dash_chartTitle: ["المبيعات مقابل المشتريات شهريًا", "Sales vs Purchases by Month"],
+  dash_sales: ["مبيعات", "Sales"],
+  dash_purchases: ["مشتريات", "Purchases"],
+  dash_noChart: ["لسه مفيش حركة كفاية تتعرض كرسم بياني", "Not enough activity yet to chart"],
+
+  strip_cash: ["السيولة (خزينة+بنوك)", "Cash (till + banks)"],
+  strip_receivable: ["مستحق من العملاء", "Due from customers"],
+  strip_payable: ["مستحق للموردين", "Due to suppliers"],
+  strip_net: ["صافي المبيعات - المشتريات", "Net sales - purchases"],
+
+  sync_connecting: ["جارِ الاتصال بالسيرفر…", "Connecting to server…"],
+  sync_saving: ["جارِ الحفظ…", "Saving…"],
+  sync_synced: ["كل البيانات محفوظة", "All data saved"],
+  sync_offline: ["تعذّر الاتصال بالسيرفر", "Can't reach the server"],
+
+  acc_title: ["شجرة الحسابات", "Chart of Accounts"],
+  acc_subtitle: ["الأصول، الخصوم، حقوق الملكية، الإيرادات والمصروفات", "Assets, Liabilities, Equity, Revenue and Expenses"],
+  acc_hint: ["البنود القابلة للتعديل دوس عليها لتدخل الرصيد الافتتاحي. باقي البنود تلقائية من الفواتير والمعاملات.", "Editable items can be clicked to set the opening balance. Other items are computed automatically from invoices & transactions."],
+  acc_auto: ["تلقائي", "Auto"],
+
+  tx_title: ["المعاملات المالية", "Financial Transactions"],
+  tx_subtitle: ["قيود يدوية تنعكس فورًا على شجرة الحسابات وكل القوائم المالية", "Manual journal entries that instantly reflect on accounts and reports"],
+  tx_new: ["معاملة جديدة", "New Transaction"],
+  tx_empty: ["لا توجد معاملات مالية يدوية بعد.", "No manual transactions yet."],
+  tx_debit: ["مدين", "Debit"],
+  tx_credit: ["دائن", "Credit"],
+  tx_memo: ["وصف المعاملة", "Memo"],
+  tx_lines: ["بنود القيد — لازم إجمالي المدين = إجمالي الدائن", "Entry lines — total debit must equal total credit"],
+  tx_addLine: ["إضافة بند", "Add line"],
+  tx_balanced: ["القيد متزن ✓", "Entry balanced ✓"],
+  tx_unbalanced: ["القيد غير متزن", "Entry not balanced"],
+  tx_new_title: ["معاملة مالية جديدة (قيد يومية)", "New Transaction (Journal Entry)"],
+  tx_currency: ["عملة المعاملة", "Transaction Currency"],
+  tx_currency_local: ["بالجنيه (العملة المحلية)", "Local currency (EGP)"],
+  tx_currency_usd: ["بالدولار الأمريكي ($)", "US Dollar ($)"],
+  tx_exchangeRate: ["سعر الصرف وقت المعاملة (1$ = كام جنيه)", "Exchange rate at the time (1$ = ? local currency)"],
+  tx_convertedTotal: ["المعادل بالجنيه", "Converted to local currency"],
+  tx_originalAmount: ["بالدولار", "in USD"],
+
+  inv_salesTitle: ["فواتير المبيعات", "Sales Invoices"],
+  inv_purchasesTitle: ["فواتير المشتريات", "Purchase Invoices"],
+  inv_new: ["فاتورة جديدة", "New Invoice"],
+  inv_number: ["رقم الفاتورة", "Invoice #"],
+  inv_customer: ["العميل", "Customer"],
+  inv_supplier: ["المورد", "Supplier"],
+  inv_items: ["أصناف الفاتورة", "Invoice Items"],
+  inv_addItem: ["إضافة صنف", "Add item"],
+  inv_grandTotal: ["الإجمالي الكلي", "Grand Total"],
+  inv_paymentStatus: ["حالة السداد", "Payment status"],
+  inv_emptySales: ["لا توجد فواتير بعد", "No invoices yet"],
+  inv_emptyPurchases: ["لا توجد فواتير بعد", "No invoices yet"],
+  inv_billTo: ["فاتورة إلى", "Bill To"],
+  inv_expenseAccount: ["بند المصروف", "Expense account"],
+  inv_itemsCount: ["صنف", "item(s)"],
+  inv_new_sale_title: ["فاتورة بيع جديدة", "New Sales Invoice"],
+  inv_new_purchase_title: ["فاتورة شراء جديدة", "New Purchase Invoice"],
+  inv_needPersonTitleCustomer: ["محتاج تضيف عميل الأول", "Add a customer first"],
+  inv_needPersonTitleSupplier: ["محتاج تضيف مورد الأول", "Add a supplier first"],
+  inv_needPersonBodyCustomer: ["مفيش عملاء مُسجّلين لسه. سجّل واحد الأول وبعدين ارجع تعمل الفاتورة.", "No customers registered yet. Add one first, then come back to create the invoice."],
+  inv_needPersonBodySupplier: ["مفيش موردين مُسجّلين لسه. سجّل واحد الأول وبعدين ارجع تعمل الفاتورة.", "No suppliers registered yet. Add one first, then come back to create the invoice."],
+  inv_goToCustomers: ["روح لصفحة العملاء", "Go to customers"],
+  inv_goToSuppliers: ["روح لصفحة الموردين", "Go to suppliers"],
+  inv_paidVia: ["تم السداد عبر", "Paid via"],
+
+  people_customersTitle: ["العملاء", "Customers"],
+  people_suppliersTitle: ["الموردون", "Suppliers"],
+  people_dueFromCustomer: ["مستحق (غير محصّل)", "Due (uncollected)"],
+  people_dueToSupplier: ["مستحق (غير مسدّد)", "Due (unpaid)"],
+  people_empty: ["لا يوجد سجلات بعد", "No records yet"],
+  people_newCustomer: ["إضافة عميل جديد", "Add New Customer"],
+  people_newSupplier: ["إضافة مورد جديد", "Add New Supplier"],
+
+  emp_title: ["الموظفون", "Employees"],
+  emp_position: ["الوظيفة", "Position"],
+  emp_hireDate: ["تاريخ التعيين", "Hire Date"],
+  emp_salary: ["الراتب الشهري", "Monthly Salary"],
+  emp_new: ["إضافة موظف", "Add Employee"],
+  emp_newTitle: ["إضافة موظف جديد", "Add New Employee"],
+  emp_empty: ["لا يوجد موظفون مُسجّلون بعد", "No employees yet"],
+  emp_totalSalaries: ["إجمالي الرواتب الشهرية", "Total monthly payroll"],
+  emp_department: ["القسم", "Department"],
+  emp_manager: ["المدير المباشر", "Reports To"],
+  emp_noManager: ["-- بدون مدير مباشر --", "-- No manager --"],
+  emp_viewList: ["قائمة", "List"],
+  emp_viewOrg: ["الهيكل التنظيمي", "Org Chart"],
+  emp_noDept: ["بدون قسم", "No department"],
+  emp_reportsTo: ["يتبع", "Reports to"],
+  emp_topLevel: ["الإدارة العليا", "Top level"],
+
+  nav_attendance: ["الحضور والانصراف", "Attendance"],
+  att_title: ["الحضور والانصراف", "Attendance"],
+  att_subtitle: ["سجل حضور وانصراف الموظفين يوميًا", "Daily employee check-in/check-out log"],
+  att_new: ["تسجيل حضور", "Log Attendance"],
+  att_newTitle: ["تسجيل حضور جديد", "New Attendance Record"],
+  att_checkIn: ["وقت الحضور", "Check-in"],
+  att_checkOut: ["وقت الانصراف", "Check-out"],
+  att_status: ["الحالة", "Status"],
+  att_present: ["حاضر", "Present"],
+  att_absent: ["غائب", "Absent"],
+  att_leave: ["إجازة", "Leave"],
+  att_empty: ["لا توجد سجلات حضور بعد", "No attendance records yet"],
+  att_employee: ["الموظف", "Employee"],
+
+  nav_payroll: ["الرواتب", "Payroll"],
+  pay_title: ["الرواتب", "Payroll"],
+  pay_subtitle: ["تشغيل رواتب الموظفين الشهرية وترحيلها للحسابات", "Run monthly employee payroll and post it to accounts"],
+  pay_new: ["تشغيل رواتب شهر جديد", "Run New Payroll"],
+  pay_newTitle: ["تشغيل رواتب شهر", "Run Monthly Payroll"],
+  pay_month: ["الشهر", "Month"],
+  pay_base: ["الراتب الأساسي", "Base"],
+  pay_bonus: ["مكافأة", "Bonus"],
+  pay_deduction: ["خصم", "Deduction"],
+  pay_net: ["الصافي", "Net"],
+  pay_total: ["إجمالي الرواتب", "Total Payroll"],
+  pay_markPaid: ["تحديد كمدفوعة وترحيلها للحسابات", "Mark Paid & Post to Accounts"],
+  pay_paid: ["مرحّلة للحسابات", "Posted to accounts"],
+  pay_empty: ["لا توجد رواتب مُشغّلة بعد", "No payroll runs yet"],
+  pay_noEmployees: ["محتاج تضيف موظفين الأول", "Add employees first"],
+  pay_postedNote: ["اتسجّل قيد بالإجمالي: مدين «رواتب وأجور» ودائن «البنك»", "A journal entry was posted: debit Salaries, credit Bank"],
+
+  bank_title: ["البنوك", "Banks"],
+  bank_subtitle: ["حسابات الشركة البنكية وبياناتها", "Your company's bank accounts and details"],
+  bank_new: ["إضافة بنك", "Add Bank"],
+  bank_newTitle: ["إضافة حساب بنكي", "Add Bank Account"],
+  bank_bankName: ["اسم البنك", "Bank Name"],
+  bank_accountNumber: ["رقم الحساب", "Account Number"],
+  bank_iban: ["الآيبان (IBAN)", "IBAN"],
+  bank_branch: ["الفرع", "Branch"],
+  bank_notes: ["ملاحظات", "Notes"],
+  bank_balance: ["الرصيد الحالي (تحديث يدوي)", "Current Balance (manual)"],
+  bank_empty: ["لسه مفيش حسابات بنكية مسجّلة", "No bank accounts registered yet"],
+  bank_hint: ["دي بيانات مرجعية لحسابات شركتك البنكية، وتقدر تحدّث الرصيد يدويًا. حساب «البنك» في شجرة الحسابات هو اللي بيتحسب فيه فعليًا أثر الفواتير والمعاملات.",
+    "This is a reference directory of your company's bank accounts; update the balance manually. The \"Bank\" account in the Chart of Accounts is what actually tracks invoice/transaction effects."],
+
+  nav_inventory: ["المخزون", "Inventory"],
+  stock_title: ["المخزون", "Inventory"],
+  stock_subtitle: ["إدارة المنتجات والكميات المتاحة", "Manage products and stock levels"],
+  stock_new: ["إضافة منتج", "Add Product"],
+  stock_newTitle: ["إضافة منتج جديد", "Add New Product"],
+  stock_sku: ["الباركود / الكود", "Barcode / SKU"],
+  stock_unit: ["الوحدة", "Unit"],
+  stock_cost: ["سعر التكلفة", "Cost Price"],
+  stock_salePrice: ["سعر البيع", "Sale Price"],
+  stock_opening: ["الكمية الافتتاحية (قابلة للتعديل)", "Opening Quantity (editable)"],
+  stock_current: ["الكمية الحالية", "Current Stock"],
+  stock_empty: ["لا توجد منتجات مسجّلة بعد", "No products yet"],
+  stock_low: ["كمية منخفضة", "Low stock"],
+  stock_pickProduct: ["اختر من المخزون", "Pick from inventory"],
+  stock_manualItem: ["صنف يدوي (بدون ربط بالمخزون)", "Manual item (no inventory link)"],
+
+  dash_topCustomers: ["أكثر العملاء تعاملاً", "Top Customers"],
+  dash_lowStock: ["منتجات بكمية منخفضة", "Low Stock Items"],
+  dash_noData: ["لا توجد بيانات كافية بعد", "Not enough data yet"],
+
+  perm_adminOnly: ["هذا القسم متاح للمسؤول فقط", "This section is admin-only"],
+
+  rep_title: ["القوائم المالية", "Financial Reports"],
+  rep_subtitle: ["تُحدَّث تلقائيًا من كل الفواتير والمعاملات المسجّلة", "Updated automatically from all recorded invoices & transactions"],
+  rep_income: ["قائمة الدخل", "Income Statement"],
+  rep_balance: ["المركز المالي", "Balance Sheet"],
+  rep_trial: ["ميزان المراجعة", "Trial Balance"],
+  rep_journal: ["دفتر اليومية", "Journal Ledger"],
+
+  inc_revenue: ["الإيرادات", "Revenue"],
+  inc_expense: ["المصروفات", "Expenses"],
+  inc_totalRevenue: ["إجمالي الإيرادات", "Total Revenue"],
+  inc_totalExpense: ["إجمالي المصروفات", "Total Expenses"],
+  inc_netProfit: ["صافي الربح", "Net Profit"],
+  inc_netLoss: ["صافي الخسارة", "Net Loss"],
+
+  bs_assets: ["الأصول", "Assets"],
+  bs_liabilities: ["الخصوم", "Liabilities"],
+  bs_equity: ["حقوق الملكية", "Equity"],
+  bs_totalAssets: ["إجمالي الأصول", "Total Assets"],
+  bs_totalLiabilities: ["إجمالي الخصوم", "Total Liabilities"],
+  bs_totalEquity: ["إجمالي حقوق الملكية", "Total Equity"],
+  bs_currentProfit: ["صافي ربح/خسارة الفترة", "Current period profit/loss"],
+  bs_balancedOk: ["الميزانية متزنة ✓", "Balance sheet is balanced ✓"],
+  bs_balancedNo: ["فيه فرق — راجع الأرصدة الافتتاحية", "There's a mismatch — review opening balances"],
+
+  tb_account: ["الحساب", "Account"],
+  tb_type: ["النوع", "Type"],
+  tb_total: ["الإجمالي", "Total"],
+  tb_balanced: ["الميزان متزن ✓", "Trial balance is balanced ✓"],
+  tb_unbalanced: ["الميزان غير متزن — راجع القيود", "Trial balance is unbalanced — review entries"],
+
+  journal_empty: ["لا توجد قيود مسجّلة بعد", "No journal entries yet"],
+
+  set_title: ["بيانات الشركة", "Company Settings"],
+  set_subtitle: ["هذه البيانات تظهر في كل أنحاء النظام والتقارير المطبوعة", "This appears throughout the system and printed reports"],
+  set_activity: ["النشاط", "Activity"],
+  set_taxId: ["الرقم الضريبي", "Tax ID"],
+  set_address: ["العنوان", "Address"],
+  set_dangerTitle: ["منطقة الخطر", "Danger Zone"],
+  set_dangerBody: ["مسح كل الحسابات والفواتير والمعاملات المالية والعملاء والموردين والموظفين والبنوك والبدء من صفحة فاضية. اسم الشركة مش هيتمسح.",
+    "Erase all accounts, invoices, transactions, customers, suppliers, employees and banks and start from an empty slate. The company name is kept."],
+  set_resetAll: ["مسح كل البيانات", "Erase all data"],
+
+  users_title: ["المستخدمون", "Users"],
+  users_subtitle: ["إدارة حسابات الدخول لفريقك", "Manage login accounts for your team"],
+  users_new: ["إضافة مستخدم", "Add User"],
+  users_newTitle: ["إضافة مستخدم جديد", "Add New User"],
+  users_username: ["اسم المستخدم", "Username"],
+  users_password: ["كلمة السر", "Password"],
+  users_fullName: ["الاسم الكامل", "Full Name"],
+  users_role: ["الصلاحية", "Role"],
+  users_admin: ["مسؤول", "Admin"],
+  users_user: ["مستخدم عادي", "Standard User"],
+  users_you: ["أنت", "You"],
+  users_securityNote: ["ملاحظة: كلمات السر مخزّنة كنص عادي في ملف البيانات — مناسب للاستخدام الداخلي، مش موصى به لو النظام منشور على الإنترنت العام.",
+    "Note: passwords are stored as plain text in the data file — fine for internal use, not recommended for a publicly hosted deployment."],
+
+  auth_companyTitle: ["بيانات الشركة", "Company Details"],
+  auth_companyBody: ["قبل ما تبدأ، دخّل بيانات شركتك الحقيقية.", "Before you start, enter your real company details."],
+  auth_companyName: ["اسم الشركة *", "Company Name *"],
+  auth_start: ["ابدأ العمل على النظام", "Start using the system"],
+  auth_adminTitle: ["إنشاء أول حساب مسؤول", "Create the first admin account"],
+  auth_adminBody: ["هيكون هذا الحساب هو المسؤول الرئيسي، ويقدر يضيف مستخدمين تانيين بعد كده.", "This account will be the main admin, and can add more users later."],
+  auth_loginTitle: ["تسجيل الدخول", "Log In"],
+  auth_loginSubtitle: ["ادخل بيانات حسابك للمتابعة", "Enter your account details to continue"],
+  auth_noAccount: ["مستخدم جديد؟", "New here?"],
+  auth_registerLink: ["أنشئ حساب", "Create an account"],
+  auth_registerTitle: ["إنشاء حساب جديد", "Create a New Account"],
+  auth_haveAccount: ["عندك حساب بالفعل؟", "Already have an account?"],
+  auth_loginLink: ["سجّل الدخول", "Log in"],
+  auth_invalidLogin: ["اسم المستخدم أو كلمة السر غير صحيحة", "Incorrect username or password"],
+  auth_usernameTaken: ["اسم المستخدم ده مُستخدم بالفعل", "That username is already taken"],
+
+  need_person_go: ["إنشاء", "create"],
+  print_generatedAt: ["تاريخ الطباعة", "Printed on"],
+  print_currency: ["العملة", "Currency"],
+  reset_title: ["مسح كل البيانات والبدء من جديد", "Erase all data and start over"],
+  reset_body: ["هيتم حذف كل الحسابات والفواتير والمعاملات المالية والعملاء والموردين والموظفين والبنوك نهائيًا. اسم الشركة هيفضل زي ما هو. متأكد؟",
+    "This will permanently delete all accounts, invoices, transactions, customers, suppliers, employees and banks. The company name will be kept. Are you sure?"],
+  reset_confirm: ["نعم، امسح كل شيء", "Yes, erase everything"],
+};
+
+const LangContext = createContext({ lang: "ar", t: (k) => k });
+function useLang() { return useContext(LangContext); }
+function useT() { return useLang().t; }
+
+/* ================= icons ================= */
+function Icon({ path, size = 18, className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d={path} />
+    </svg>
+  );
+}
+const ICONS = {
+  grid: "M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z",
+  book: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13z M20 22H6.5A2.5 2.5 0 0 1 4 19.5",
+  fileText: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M9 13h6 M9 17h6 M9 9h1",
+  fileMinus: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M9 15h6",
+  users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75",
+  building: "M4 22h16 M6 22V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v18 M9 6h1 M9 10h1 M9 14h1 M14 6h1 M14 10h1 M14 14h1 M9 22v-4h6v4",
+  briefcase: "M20 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16",
+  plus: "M12 5v14 M5 12h14",
+  trash: "M3 6h18 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6 M10 11v6 M14 11v6",
+  x: "M18 6 6 18 M6 6l12 12",
+  up: "M23 6l-9.5 9.5-5-5L1 18",
+  down: "M23 18l-9.5-9.5-5 5L1 6",
+  wallet: "M21 12V7H5a2 2 0 0 1 0-4h14v4 M3 5v14a2 2 0 0 0 2 2h16v-5 M18 12a2 2 0 0 0 0 4h4v-4z",
+  chevDown: "M6 9l6 6 6-6",
+  chevRight: "M9 18l6-6-6-6",
+  check: "M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4 12 14.01l-3-3",
+  clock: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2",
+  settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
+  pencil: "M12 20h9 M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z",
+  building2: "M3 21h18 M5 21V7l7-4 7 4v14 M9 9h1 M14 9h1 M9 13h1 M14 13h1 M9 17h6",
+  alert: "M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01",
+  printer: "M6 9V2h12v7 M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2 M6 14h12v8H6z",
+  report: "M9 17v-6 M12 17v-10 M15 17v-4 M4 21h16a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1z",
+  swap: "M17 3v4a2 2 0 0 1-2 2H3 M7 21v-4a2 2 0 0 1 2-2h12 M21 7l-4-4-4 4 M3 17l4 4 4-4",
+  lock: "M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z M7 11V7a5 5 0 0 1 10 0v4",
+  globe: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M2 12h20 M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z",
+  logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9",
+  bank: "M3 10l9-7 9 7 M4 10v10 M20 10v10 M2 21h20 M9 21v-6h6v6",
+  box: "M21 8l-9-5-9 5 9 5 9-5z M3 8v8l9 5 9-5V8 M12 13v8",
+  calendar: "M8 2v4 M16 2v4 M3 10h18 M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
+  cash: "M2 7h20v10H2z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z M6 7v10 M18 7v10",
+  user: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+};
+const Ic = (name, props) => <Icon path={ICONS[name]} {...props} />;
+
+/* ================= accounting nature ================= */
+function nature(type) { return (type === "asset" || type === "expense") ? "debit" : "credit"; }
+function applyLine(byId, accountId, debit, credit) {
+  const acc = byId[accountId];
+  if (!acc) return;
+  acc.balance += nature(acc.type) === "debit" ? (debit - credit) : (credit - debit);
+}
+function txRate(tx) { return tx.currency === "usd" ? (Number(tx.exchangeRate) || 1) : 1; }
+function invoiceTotal(inv) { return (inv.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0); }
+
+/* ================= fresh, empty company data ================= */
+function emptyData() {
+  const accounts = [
+    { id: "a1", code: "1", name: "الأصول", nameEn: "Assets", type: "root", parentId: null },
+    { id: "a1-1", code: "1-1", name: "الخزينة (نقدية)", nameEn: "Cash on Hand", type: "asset", parentId: "a1", balance: 0, editable: true },
+    { id: "a1-2", code: "1-2", name: "البنك", nameEn: "Bank", type: "asset", parentId: "a1", balance: 0, editable: true },
+    { id: "a1-3", code: "1-3", name: "عملاء (ذمم مدينة)", nameEn: "Accounts Receivable", type: "asset", parentId: "a1", balance: 0, editable: false },
+    { id: "a1-4", code: "1-4", name: "أجهزة ومعدات", nameEn: "Equipment", type: "asset", parentId: "a1", balance: 0, editable: true },
+    { id: "a2", code: "2", name: "الخصوم", nameEn: "Liabilities", type: "root", parentId: null },
+    { id: "a2-1", code: "2-1", name: "موردون (ذمم دائنة)", nameEn: "Accounts Payable", type: "liability", parentId: "a2", balance: 0, editable: false },
+    { id: "a2-2", code: "2-2", name: "قروض قصيرة الأجل", nameEn: "Short-term Loans", type: "liability", parentId: "a2", balance: 0, editable: true },
+    { id: "a3", code: "3", name: "حقوق الملكية", nameEn: "Equity", type: "root", parentId: null },
+    { id: "a3-1", code: "3-1", name: "رأس المال", nameEn: "Capital", type: "equity", parentId: "a3", balance: 0, editable: true },
+    { id: "a3-2", code: "3-2", name: "أرباح مرحّلة", nameEn: "Retained Earnings", type: "equity", parentId: "a3", balance: 0, editable: true },
+    { id: "a4", code: "4", name: "الإيرادات", nameEn: "Revenue", type: "root", parentId: null },
+    { id: "a4-1", code: "4-1", name: "إيراد المبيعات / الخدمات", nameEn: "Sales / Service Revenue", type: "revenue", parentId: "a4", balance: 0, editable: false },
+    { id: "a4-2", code: "4-2", name: "إيرادات أخرى", nameEn: "Other Revenue", type: "revenue", parentId: "a4", balance: 0, editable: false },
+    { id: "a5", code: "5", name: "المصروفات", nameEn: "Expenses", type: "root", parentId: null },
+    { id: "a5-1", code: "5-1", name: "رواتب وأجور", nameEn: "Salaries & Wages", type: "expense", parentId: "a5", balance: 0, editable: false },
+    { id: "a5-2", code: "5-2", name: "إيجار", nameEn: "Rent", type: "expense", parentId: "a5", balance: 0, editable: false },
+    { id: "a5-3", code: "5-3", name: "اشتراكات وأدوات", nameEn: "Subscriptions & Tools", type: "expense", parentId: "a5", balance: 0, editable: false },
+    { id: "a5-4", code: "5-4", name: "تسويق وإعلان", nameEn: "Marketing", type: "expense", parentId: "a5", balance: 0, editable: false },
+    { id: "a5-5", code: "5-5", name: "مصروفات متنوعة", nameEn: "Miscellaneous Expenses", type: "expense", parentId: "a5", balance: 0, editable: false },
+  ];
+  return {
+    company: null,
+    users: [],
+    accounts,
+    banks: [],
+    products: [],
+    customers: [],
+    suppliers: [],
+    employees: [],
+    salesInvoices: [],
+    purchaseInvoices: [],
+    transactions: [],
+    attendance: [],
+    payrollRuns: [],
+  };
+}
+function normalize(parsed) {
+  const d = { ...emptyData(), ...parsed };
+  if (!d.transactions) d.transactions = [];
+  if (!d.users) d.users = [];
+  if (!d.banks) d.banks = [];
+  if (!d.products) d.products = [];
+  if (!d.attendance) d.attendance = [];
+  if (!d.payrollRuns) d.payrollRuns = [];
+  d.salesInvoices = (d.salesInvoices || []).map(inv => inv.items ? inv : { ...inv, items: [{ id: uid(), desc: inv.desc || "", qty: inv.qty || 1, price: inv.price || 0 }] });
+  d.purchaseInvoices = (d.purchaseInvoices || []).map(inv => inv.items ? inv : { ...inv, items: [{ id: uid(), desc: inv.desc || "", qty: inv.qty || 1, price: inv.price || 0 }] });
+  return d;
+}
+
+/* stock = opening quantity + purchased qty - sold qty, per product */
+function applyInventory(base) {
+  const products = base.products.map(p => ({ ...p, stock: Number(p.openingStock) || 0 }));
+  const byId = Object.fromEntries(products.map(p => [p.id, p]));
+  base.purchaseInvoices.forEach(inv => (inv.items || []).forEach(it => { if (it.productId && byId[it.productId]) byId[it.productId].stock += Number(it.qty) || 0; }));
+  base.salesInvoices.forEach(inv => (inv.items || []).forEach(it => { if (it.productId && byId[it.productId]) byId[it.productId].stock -= Number(it.qty) || 0; }));
+  return products;
+}
+
+function applyLedger(base) {
+  const accounts = base.accounts.map((a) => ({ ...a }));
+  const customers = base.customers.map((c) => ({ ...c, balance: 0 }));
+  const suppliers = base.suppliers.map((s) => ({ ...s, balance: 0 }));
+  const byId = Object.fromEntries(accounts.map((a) => [a.id, a]));
+  accounts.forEach((a) => { if (!a.editable) a.balance = 0; });
+
+  base.salesInvoices.forEach((inv) => {
+    const total = invoiceTotal(inv);
+    const cust = customers.find((c) => c.id === inv.customerId);
+    if (cust) cust.balance += inv.status === "مدفوعة" ? 0 : total;
+    applyLine(byId, "a4-1", 0, total);
+    if (inv.status === "مدفوعة") applyLine(byId, "a1-2", total, 0);
+    else applyLine(byId, "a1-3", total, 0);
+  });
+  base.purchaseInvoices.forEach((inv) => {
+    const total = invoiceTotal(inv);
+    const sup = suppliers.find((s) => s.id === inv.supplierId);
+    if (sup) sup.balance += inv.status === "مدفوعة" ? 0 : total;
+    applyLine(byId, inv.accountId || "a5-5", total, 0);
+    if (inv.status === "مدفوعة") applyLine(byId, "a1-2", 0, total);
+    else applyLine(byId, "a2-1", 0, total);
+  });
+  (base.transactions || []).forEach((tx) => {
+    const rate = txRate(tx);
+    tx.lines.forEach((l) => applyLine(byId, l.accountId, (Number(l.debit) || 0) * rate, (Number(l.credit) || 0) * rate));
+  });
+
+  return {
+    ...base, accounts,
+    customers: customers.map((c, i) => ({ ...base.customers[i], balance: c.balance })),
+    suppliers: suppliers.map((s, i) => ({ ...base.suppliers[i], balance: s.balance })),
+  };
+}
+
+function buildJournal(base, lang) {
+  const accName = (a) => lang === "en" ? (a.nameEn || a.name) : a.name;
+  const rows = [];
+  base.salesInvoices.forEach((inv) => {
+    const total = invoiceTotal(inv);
+    rows.push({
+      id: "SI-" + inv.id, date: inv.date, memo: `${lang === "en" ? "Sales invoice" : "فاتورة بيع"} ${inv.number}`,
+      lines: [
+        { accountName: inv.status === "مدفوعة" ? (lang === "en" ? "Bank" : "البنك") : (lang === "en" ? "Accounts Receivable" : "عملاء (ذمم مدينة)"), debit: total, credit: 0 },
+        { accountName: lang === "en" ? "Sales Revenue" : "إيراد المبيعات / الخدمات", debit: 0, credit: total },
+      ],
+    });
+  });
+  base.purchaseInvoices.forEach((inv) => {
+    const total = invoiceTotal(inv);
+    const acc = base.accounts.find(a => a.id === inv.accountId);
+    const expName = acc ? accName(acc) : (lang === "en" ? "Misc Expenses" : "مصروفات متنوعة");
+    rows.push({
+      id: "PI-" + inv.id, date: inv.date, memo: `${lang === "en" ? "Purchase invoice" : "فاتورة شراء"} ${inv.number}`,
+      lines: [
+        { accountName: expName, debit: total, credit: 0 },
+        { accountName: inv.status === "مدفوعة" ? (lang === "en" ? "Bank" : "البنك") : (lang === "en" ? "Accounts Payable" : "موردون (ذمم دائنة)"), debit: 0, credit: total },
+      ],
+    });
+  });
+  (base.transactions || []).forEach((tx) => {
+    const rate = txRate(tx);
+    const fx = tx.currency === "usd" ? ` ($${fmt(tx.lines.reduce((s, l) => s + (Number(l.debit) || 0), 0))} × ${rate})` : "";
+    rows.push({
+      id: "TX-" + tx.id, date: tx.date, memo: tx.memo + fx,
+      lines: tx.lines.map(l => {
+        const acc = base.accounts.find(a => a.id === l.accountId);
+        return { accountName: acc ? accName(acc) : "—", debit: (Number(l.debit) || 0) * rate, credit: (Number(l.credit) || 0) * rate };
+      }),
+    });
+  });
+  return rows.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+const NAV = [
+  { key: "dashboard", label: "nav_dashboard", icon: "grid" },
+  { key: "accounts", label: "nav_accounts", icon: "book" },
+  { key: "transactions", label: "nav_transactions", icon: "swap" },
+  { key: "sales", label: "nav_sales", icon: "fileText" },
+  { key: "purchases", label: "nav_purchases", icon: "fileMinus" },
+  { key: "inventory", label: "nav_inventory", icon: "box" },
+  { key: "customers", label: "nav_customers", icon: "users" },
+  { key: "suppliers", label: "nav_suppliers", icon: "building" },
+  { key: "employees", label: "nav_employees", icon: "briefcase" },
+  { key: "attendance", label: "nav_attendance", icon: "calendar" },
+  { key: "payroll", label: "nav_payroll", icon: "cash" },
+  { key: "banks", label: "nav_banks", icon: "bank" },
+  { key: "reports", label: "nav_reports", icon: "report" },
+  { key: "users", label: "nav_users", icon: "user" },
+  { key: "settings", label: "nav_settings", icon: "settings", adminOnly: true },
+];
+
+function StatusPill({ status }) {
+  const t = useT();
+  const paid = status === "مدفوعة";
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${paid ? "bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-400/30" : "bg-amber-400/10 text-amber-300 ring-1 ring-amber-400/30"}`}>
+      {Ic(paid ? "check" : "clock", { size: 12 })} {paid ? t("status_paid") : t("status_unpaid")}
+    </span>
+  );
+}
+function Field({ label, children }) {
+  return <label className="flex flex-col gap-1.5 text-sm"><span className="text-slate-400">{label}</span>{children}</label>;
+}
+const inputCls = "bg-[#0F1729] border border-white/10 rounded-lg px-3 py-2 text-slate-100 text-sm outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 placeholder:text-slate-600 w-full";
+
+function Modal({ title, onClose, children, hideClose, wide }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={hideClose ? undefined : onClose}>
+      <div className={`w-full ${wide ? "max-w-2xl" : "max-w-lg"} rounded-2xl border border-white/10 bg-[#131B2E] shadow-2xl shadow-black/50 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sticky top-0 bg-[#131B2E]">
+          <h3 className="font-bold text-slate-100">{title}</h3>
+          {!hideClose && <button onClick={onClose} className="text-slate-500 hover:text-slate-200">{Ic("x", { size: 18 })}</button>}
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+function PrimaryBtn({ children, ...props }) {
+  return <button {...props} className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-400 text-[#07101E] text-sm font-bold px-4 py-2 hover:bg-cyan-300 transition-colors disabled:opacity-40">{children}</button>;
+}
+function GhostBtn({ children, ...props }) {
+  return <button {...props} className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 text-slate-300 text-sm font-bold px-4 py-2 hover:bg-white/10 transition-colors">{children}</button>;
+}
+function DangerBtn({ children, ...props }) {
+  return <button {...props} className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/10 text-rose-300 ring-1 ring-rose-500/30 text-sm font-bold px-4 py-2 hover:bg-rose-500/20 transition-colors">{children}</button>;
+}
+function PrintBtn({ onClick, full }) {
+  const t = useT();
+  return (
+    <button onClick={onClick} className="no-print inline-flex items-center gap-1.5 rounded-lg bg-white/5 text-slate-300 text-sm font-bold px-4 py-2 hover:bg-white/10 transition-colors ring-1 ring-white/10">
+      {Ic("printer", { size: 15 })} {full ? t("btn_printReport") : t("btn_print")}
+    </button>
+  );
+}
+function PrintHeader({ company, title, currency }) {
+  const t = useT();
+  return (
+    <div className="print-only mb-6 border-b border-black/20 pb-4">
+      <div className="text-xl font-black">{company?.name}</div>
+      <div className="text-sm">{company?.activity}</div>
+      <div className="text-lg font-bold mt-3">{title}</div>
+      <div className="text-xs mt-1">{t("print_generatedAt")}: {nowStamp()} · {t("print_currency")}: {currency}</div>
+    </div>
+  );
+}
+
+/* ================= auth screens ================= */
+function CompanySetupModal({ onSave }) {
+  const t = useT();
+  const [f, setF] = useState({ name: "", activity: "", phone: "", address: "", taxId: "", currency: "ج.م" });
+  const valid = f.name.trim().length > 0;
+  return (
+    <Modal title={t("auth_companyTitle")} hideClose>
+      <p className="text-sm text-slate-400 mb-4 -mt-1">{t("auth_companyBody")}</p>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (valid) onSave(f); }}>
+        <Field label={t("auth_companyName")}><input autoFocus className={inputCls} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></Field>
+        <Field label={t("set_activity")}><input className={inputCls} value={f.activity} onChange={e => setF({ ...f, activity: e.target.value })} /></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("common_phone")}><input className={inputCls} value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></Field>
+          <Field label={t("set_taxId")}><input className={inputCls} value={f.taxId} onChange={e => setF({ ...f, taxId: e.target.value })} /></Field>
+        </div>
+        <Field label={t("set_address")}><input className={inputCls} value={f.address} onChange={e => setF({ ...f, address: e.target.value })} /></Field>
+        <Field label={t("common_currency")}><input className={inputCls} value={f.currency} onChange={e => setF({ ...f, currency: e.target.value })} placeholder="ج.م" /></Field>
+        <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("auth_start")}</PrimaryBtn></div>
+      </form>
+    </Modal>
+  );
+}
+
+function AuthCard({ children }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#131B2E] p-7 shadow-2xl">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function FirstAdminScreen({ onCreate }) {
+  const t = useT();
+  const [f, setF] = useState({ fullName: "", username: "", password: "" });
+  const valid = f.fullName && f.username && f.password.length >= 4;
+  return (
+    <AuthCard>
+      <div className="flex items-center gap-2 mb-1 text-cyan-300">{Ic("lock", { size: 20 })}<span className="font-black text-lg text-slate-50">{t("auth_adminTitle")}</span></div>
+      <p className="text-sm text-slate-400 mb-5">{t("auth_adminBody")}</p>
+      <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (valid) onCreate(f); }}>
+        <Field label={t("users_fullName")}><input autoFocus className={inputCls} value={f.fullName} onChange={e => setF({ ...f, fullName: e.target.value })} /></Field>
+        <Field label={t("users_username")}><input className={inputCls} value={f.username} onChange={e => setF({ ...f, username: e.target.value })} /></Field>
+        <Field label={t("users_password")}><input type="password" className={inputCls} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} /></Field>
+        <PrimaryBtn type="submit" disabled={!valid} className="w-full justify-center">{t("btn_register")}</PrimaryBtn>
+      </form>
+    </AuthCard>
+  );
+}
+
+function LoginScreen({ users, onLogin, onGoRegister }) {
+  const t = useT();
+  const [f, setF] = useState({ username: "", password: "" });
+  const [err, setErr] = useState(false);
+  function submit(e) {
+    e.preventDefault();
+    const u = users.find(u => u.username === f.username && u.password === f.password);
+    if (u) onLogin(u); else setErr(true);
+  }
+  return (
+    <AuthCard>
+      <div className="flex items-center gap-2 mb-1 text-cyan-300">{Ic("lock", { size: 20 })}<span className="font-black text-lg text-slate-50">{t("auth_loginTitle")}</span></div>
+      <p className="text-sm text-slate-400 mb-5">{t("auth_loginSubtitle")}</p>
+      <form className="space-y-4" onSubmit={submit}>
+        <Field label={t("users_username")}><input autoFocus className={inputCls} value={f.username} onChange={e => { setF({ ...f, username: e.target.value }); setErr(false); }} /></Field>
+        <Field label={t("users_password")}><input type="password" className={inputCls} value={f.password} onChange={e => { setF({ ...f, password: e.target.value }); setErr(false); }} /></Field>
+        {err && <div className="text-rose-300 text-sm">{t("auth_invalidLogin")}</div>}
+        <PrimaryBtn type="submit" className="w-full justify-center">{t("btn_login")}</PrimaryBtn>
+      </form>
+      <div className="text-center text-sm text-slate-500 mt-4">{t("auth_noAccount")} <button onClick={onGoRegister} className="text-cyan-300 font-bold hover:underline">{t("auth_registerLink")}</button></div>
+    </AuthCard>
+  );
+}
+
+function RegisterScreen({ users, onRegister, onGoLogin }) {
+  const t = useT();
+  const [f, setF] = useState({ fullName: "", username: "", password: "" });
+  const [err, setErr] = useState(false);
+  const valid = f.fullName && f.username && f.password.length >= 4;
+  function submit(e) {
+    e.preventDefault();
+    if (users.some(u => u.username === f.username)) { setErr(true); return; }
+    if (valid) onRegister(f);
+  }
+  return (
+    <AuthCard>
+      <div className="flex items-center gap-2 mb-1 text-cyan-300">{Ic("user", { size: 20 })}<span className="font-black text-lg text-slate-50">{t("auth_registerTitle")}</span></div>
+      <form className="space-y-4 mt-5" onSubmit={submit}>
+        <Field label={t("users_fullName")}><input autoFocus className={inputCls} value={f.fullName} onChange={e => setF({ ...f, fullName: e.target.value })} /></Field>
+        <Field label={t("users_username")}><input className={inputCls} value={f.username} onChange={e => { setF({ ...f, username: e.target.value }); setErr(false); }} /></Field>
+        <Field label={t("users_password")}><input type="password" className={inputCls} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} /></Field>
+        {err && <div className="text-rose-300 text-sm">{t("auth_usernameTaken")}</div>}
+        <PrimaryBtn type="submit" disabled={!valid} className="w-full justify-center">{t("btn_register")}</PrimaryBtn>
+      </form>
+      <div className="text-center text-sm text-slate-500 mt-4">{t("auth_haveAccount")} <button onClick={onGoLogin} className="text-cyan-300 font-bold hover:underline">{t("auth_loginLink")}</button></div>
+    </AuthCard>
+  );
+}
+
+/* ================= root app ================= */
+function Root() {
+  const [lang, setLang] = useState(() => localStorage.getItem("erp-lang") || "ar");
+  useEffect(() => { localStorage.setItem("erp-lang", lang); }, [lang]);
+  const t = (key) => (STRINGS[key] ? STRINGS[key][lang === "en" ? 1 : 0] : key);
+  return (
+    <LangContext.Provider value={{ lang, setLang, t }}>
+      <div dir={lang === "ar" ? "rtl" : "ltr"} className={lang === "ar" ? "font-ar" : "font-en"}>
+        <App />
+      </div>
+    </LangContext.Provider>
+  );
+}
+
+function LangToggle() {
+  const { lang, setLang } = useLang();
+  return (
+    <button onClick={() => setLang(lang === "ar" ? "en" : "ar")} className="no-print inline-flex items-center gap-1.5 rounded-lg bg-white/5 text-slate-300 text-xs font-bold px-3 py-1.5 hover:bg-white/10 transition-colors ring-1 ring-white/10">
+      {Ic("globe", { size: 13 })} {lang === "ar" ? "English" : "العربية"}
+    </button>
+  );
+}
+
+function App() {
+  const t = useT();
+  const [raw, setRaw] = useState(null);
+  const [tab, setTab] = useState("dashboard");
+  const [modal, setModal] = useState(null);
+  const [toast, setToast] = useState("");
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [syncState, setSyncState] = useState("connecting");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authScreen, setAuthScreen] = useState("login"); // login | register
+  const saveTimer = useRef(null);
+  const skipNextSave = useRef(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/data");
+        if (!res.ok) throw new Error("bad response");
+        const parsed = normalize(await res.json());
+        skipNextSave.current = true;
+        setRaw(parsed);
+        setSyncState("synced");
+      } catch (err) {
+        setSyncState("offline");
+        setRaw(emptyData());
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!raw) return;
+    if (skipNextSave.current) { skipNextSave.current = false; return; }
+    setSyncState("saving");
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/data", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(raw) });
+        if (!res.ok) throw new Error("save failed");
+        setSyncState("synced");
+      } catch { setSyncState("offline"); }
+    }, 500);
+  }, [raw]);
+
+  // session restore
+  useEffect(() => {
+    if (!raw) return;
+    try {
+      const sess = JSON.parse(localStorage.getItem("erp-session") || "null");
+      if (sess) {
+        const u = raw.users.find(u => u.username === sess.username);
+        if (u) setCurrentUser(u);
+      }
+    } catch {}
+  }, [raw?.company]);
+
+  const data = useMemo(() => (raw ? applyLedger(raw) : null), [raw]);
+  const products = useMemo(() => (raw ? applyInventory(raw) : []), [raw]);
+  const { lang } = useLang();
+  const journal = useMemo(() => (raw ? buildJournal({ ...raw, accounts: data.accounts }, lang) : []), [raw, data, lang]);
+  function flash(msg) { setToast(msg); setTimeout(() => setToast(""), 2200); }
+
+  if (!raw || !data) {
+    return <div className="min-h-screen bg-[#0B1220] flex items-center justify-center text-slate-500">…</div>;
+  }
+
+  if (!raw.company) {
+    return <div className="min-h-screen bg-[#0B1220]"><CompanySetupModal onSave={(company) => { setRaw(r => ({ ...r, company })); }} /></div>;
+  }
+
+  function loginSession(u) { setCurrentUser(u); localStorage.setItem("erp-session", JSON.stringify({ username: u.username })); }
+  function logout() { setCurrentUser(null); localStorage.removeItem("erp-session"); }
+
+  if (raw.users.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#0B1220]">
+        <FirstAdminScreen onCreate={(f) => {
+          const u = { id: uid(), username: f.username, password: f.password, fullName: f.fullName, role: "admin" };
+          setRaw(r => ({ ...r, users: [u] }));
+          loginSession(u);
+        }} />
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#0B1220]">
+        {authScreen === "login"
+          ? <LoginScreen users={raw.users} onLogin={loginSession} onGoRegister={() => setAuthScreen("register")} />
+          : <RegisterScreen users={raw.users} onGoLogin={() => setAuthScreen("login")} onRegister={(f) => {
+              const u = { id: uid(), username: f.username, password: f.password, fullName: f.fullName, role: "user" };
+              setRaw(r => ({ ...r, users: [...r.users, u] }));
+              loginSession(u);
+            }} />}
+      </div>
+    );
+  }
+
+  const totals = {
+    salesTotal: data.salesInvoices.reduce((s, i) => s + invoiceTotal(i), 0),
+    purchasesTotal: data.purchaseInvoices.reduce((s, i) => s + invoiceTotal(i), 0),
+    cash: (data.accounts.find(a => a.id === "a1-1")?.balance || 0) + (data.accounts.find(a => a.id === "a1-2")?.balance || 0),
+    receivable: data.accounts.find(a => a.id === "a1-3")?.balance || 0,
+    payable: data.accounts.find(a => a.id === "a2-1")?.balance || 0,
+  };
+  const net = totals.salesTotal - totals.purchasesTotal;
+  const currency = raw.company?.currency || "ج.م";
+
+  function addSale(form) {
+    setRaw(r => ({ ...r, salesInvoices: [{ id: uid(), number: `SI-${1000 + r.salesInvoices.length + 1}`, ...form }, ...r.salesInvoices] }));
+    flash("✓");
+  }
+  function addPurchase(form) {
+    setRaw(r => ({ ...r, purchaseInvoices: [{ id: uid(), number: `PI-${2000 + r.purchaseInvoices.length + 1}`, ...form }, ...r.purchaseInvoices] }));
+    flash("✓");
+  }
+  function addPerson(kind, form) { setRaw(r => ({ ...r, [kind]: [{ id: uid(), balance: 0, ...form }, ...r[kind]] })); flash("✓"); }
+  function addEmployee(form) { setRaw(r => ({ ...r, employees: [{ id: uid(), ...form, salary: Number(form.salary) }, ...r.employees] })); flash("✓"); }
+  function addAttendance(form) { setRaw(r => ({ ...r, attendance: [{ id: uid(), ...form }, ...(r.attendance || [])] })); flash("✓"); }
+  function removeAttendance(id) { setRaw(r => ({ ...r, attendance: (r.attendance || []).filter(x => x.id !== id) })); }
+  function addPayrollRun(run) { setRaw(r => ({ ...r, payrollRuns: [{ id: uid(), status: "غير مدفوعة", ...run }, ...(r.payrollRuns || [])] })); flash("✓"); }
+  function markPayrollPaid(run) {
+    setRaw(r => ({
+      ...r,
+      payrollRuns: (r.payrollRuns || []).map(p => p.id === run.id ? { ...p, status: "مدفوعة" } : p),
+      transactions: [{ id: uid(), date: today(), memo: `${run.month} صرف رواتب`, lines: [{ accountId: "a5-1", debit: run.total, credit: 0 }, { accountId: "a1-2", debit: 0, credit: run.total }] }, ...(r.transactions || [])],
+    }));
+    flash("✓");
+  }
+  function addBank(form) { setRaw(r => ({ ...r, banks: [{ id: uid(), balance: 0, ...form }, ...r.banks] })); flash("✓"); }
+  function addProduct(form) { setRaw(r => ({ ...r, products: [{ id: uid(), ...form }, ...r.products] })); flash("✓"); }
+  function setProductStock(id, value) { setRaw(r => ({ ...r, products: r.products.map(p => p.id === id ? { ...p, openingStock: Number(value) || 0 } : p) })); }
+  function removeItem(kind, id) { setRaw(r => ({ ...r, [kind]: r[kind].filter(x => x.id !== id) })); }
+  function toggleStatus(kind, id) { setRaw(r => ({ ...r, [kind]: r[kind].map(x => x.id === id ? { ...x, status: x.status === "مدفوعة" ? "غير مدفوعة" : "مدفوعة" } : x) })); }
+  function setOpeningBalance(id, value) { setRaw(r => ({ ...r, accounts: r.accounts.map(a => a.id === id ? { ...a, balance: Number(value) || 0 } : a) })); }
+  function setBankBalance(id, value) { setRaw(r => ({ ...r, banks: r.banks.map(b => b.id === id ? { ...b, balance: Number(value) || 0 } : b) })); }
+  function saveCompany(company) { setRaw(r => ({ ...r, company })); flash("✓"); }
+  function addTransaction(tx) { setRaw(r => ({ ...r, transactions: [{ id: uid(), ...tx }, ...(r.transactions || [])] })); flash("✓"); }
+  function removeTransaction(id) { setRaw(r => ({ ...r, transactions: (r.transactions || []).filter(x => x.id !== id) })); }
+  function addUser(u) { setRaw(r => ({ ...r, users: [...r.users, { id: uid(), ...u }] })); flash("✓"); }
+  function removeUser(id) { setRaw(r => ({ ...r, users: r.users.filter(u => u.id !== id) })); }
+  function resetAll() { const fresh = emptyData(); fresh.company = raw.company; fresh.users = raw.users; setRaw(fresh); setConfirmReset(false); flash("✓"); }
+
+  const initials = (raw.company?.name || "؟").trim().charAt(0);
+  const postableAccounts = data.accounts.filter(a => a.type !== "root");
+  const isAdmin = currentUser.role === "admin";
+  const visibleNav = NAV.filter(n => !n.adminOnly || isAdmin);
+
+  return (
+    <div className="min-h-screen bg-[#0B1220] text-slate-200">
+      <div className="flex">
+        <aside className="no-print hidden md:flex w-64 shrink-0 flex-col border-l border-white/5 rtl:border-l rtl:border-r-0 bg-[#0D1524] min-h-screen sticky top-0">
+          <div className="px-5 py-6 border-b border-white/5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center font-black text-[#07101E] text-lg">{initials}</div>
+              <div className="min-w-0">
+                <div className="font-black text-slate-50 leading-tight truncate">{raw.company.name}</div>
+                <div className="text-[11px] text-slate-500 truncate">{raw.company.activity}</div>
+              </div>
+            </div>
+          </div>
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            {visibleNav.map(n => {
+              const active = tab === n.key;
+              return (
+                <button key={n.key} onClick={() => setTab(n.key)} className={`w-full flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-bold transition-colors ${active ? "bg-cyan-400/10 text-cyan-300 ring-1 ring-cyan-400/30" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"}`}>
+                  {Ic(n.icon, { size: 17 })} {t(n.label)}
+                </button>
+              );
+            })}
+          </nav>
+          <div className="px-5 py-4 border-t border-white/5 space-y-3">
+            <LangToggle />
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-slate-400 truncate">{currentUser.fullName}</div>
+              <button onClick={logout} className="text-slate-500 hover:text-rose-300" title={t("btn_logout")}>{Ic("logout", { size: 15 })}</button>
+            </div>
+          </div>
+        </aside>
+
+        <div className="no-print md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0D1524] border-t border-white/10 flex overflow-x-auto">
+          {visibleNav.map(n => {
+            const active = tab === n.key;
+            return (
+              <button key={n.key} onClick={() => setTab(n.key)} className={`flex-1 min-w-[76px] flex flex-col items-center gap-1 py-2.5 text-[10px] font-bold ${active ? "text-cyan-300" : "text-slate-500"}`}>
+                {Ic(n.icon, { size: 17 })} {t(n.label)}
+              </button>
+            );
+          })}
+        </div>
+
+        <main className="flex-1 min-w-0 pb-24 md:pb-8 print-area">
+          <div className="no-print border-b border-white/5 bg-[#0D1524]/60 px-5 md:px-8 py-3 flex flex-wrap items-center gap-x-8 gap-y-1 text-[12px] tabular">
+            <StripStat label={t("strip_cash")} value={totals.cash} color="text-cyan-300" currency={currency} />
+            <StripStat label={t("strip_receivable")} value={totals.receivable} color="text-amber-300" currency={currency} />
+            <StripStat label={t("strip_payable")} value={totals.payable} color="text-rose-300" currency={currency} />
+            <StripStat label={t("strip_net")} value={net} color={net >= 0 ? "text-emerald-300" : "text-rose-300"} currency={currency} />
+            <SyncBadge state={syncState} />
+          </div>
+
+          <div className="px-5 md:px-8 py-6">
+            {tab === "dashboard" && <Dashboard data={data} totals={totals} currency={currency} company={raw.company} products={products} />}
+            {tab === "accounts" && <AccountsTree accounts={data.accounts} currency={currency} onEdit={setOpeningBalance} isAdmin={isAdmin} />}
+            {tab === "transactions" && <TransactionsPage transactions={raw.transactions || []} accounts={postableAccounts} currency={currency} onAdd={() => setModal({ type: "transaction" })} onDelete={removeTransaction} />}
+            {tab === "sales" && <InvoiceTable kind="sale" rows={data.salesInvoices} who={data.customers} whoKey="customerId" currency={currency} onAdd={() => setModal({ type: "sale" })} onDelete={id => removeItem("salesInvoices", id)} onToggle={id => toggleStatus("salesInvoices", id)} onPrint={(inv) => setModal({ type: "printInvoice", kind: "sale", invoice: inv })} banks={raw.banks} />}
+            {tab === "purchases" && <InvoiceTable kind="purchase" rows={data.purchaseInvoices} who={data.suppliers} whoKey="supplierId" currency={currency} onAdd={() => setModal({ type: "purchase" })} onDelete={id => removeItem("purchaseInvoices", id)} onToggle={id => toggleStatus("purchaseInvoices", id)} onPrint={(inv) => setModal({ type: "printInvoice", kind: "purchase", invoice: inv })} banks={raw.banks} accounts={data.accounts} />}
+            {tab === "inventory" && <InventoryPage products={products} currency={currency} isAdmin={isAdmin} onAdd={() => setModal({ type: "product" })} onDelete={id => removeItem("products", id)} onEdit={setProductStock} />}
+            {tab === "customers" && <PeopleTable kind="customer" rows={data.customers} currency={currency} onAdd={() => setModal({ type: "customer" })} onDelete={id => removeItem("customers", id)} />}
+            {tab === "suppliers" && <PeopleTable kind="supplier" rows={data.suppliers} currency={currency} onAdd={() => setModal({ type: "supplier" })} onDelete={id => removeItem("suppliers", id)} />}
+            {tab === "employees" && <EmployeesTable rows={data.employees} currency={currency} onAdd={() => setModal({ type: "employee" })} onDelete={id => removeItem("employees", id)} />}
+            {tab === "attendance" && <AttendancePage records={raw.attendance || []} employees={data.employees} onAdd={() => setModal({ type: "attendance" })} onDelete={removeAttendance} />}
+            {tab === "payroll" && <PayrollPage runs={raw.payrollRuns || []} employees={data.employees} currency={currency} isAdmin={isAdmin} onAdd={() => setModal({ type: "payroll" })} onMarkPaid={markPayrollPaid} />}
+            {tab === "banks" && <BanksPage banks={raw.banks} currency={currency} onAdd={() => setModal({ type: "bank" })} onDelete={id => removeItem("banks", id)} onEdit={setBankBalance} isAdmin={isAdmin} />}
+            {tab === "reports" && <ReportsPage data={data} journal={journal} currency={currency} company={raw.company} />}
+            {tab === "users" && <UsersPage users={raw.users} currentUser={currentUser} onAdd={() => setModal({ type: "user" })} onDelete={removeUser} />}
+            {tab === "settings" && <SettingsPanel company={raw.company} onSave={saveCompany} onResetClick={() => setConfirmReset(true)} />}
+          </div>
+        </main>
+      </div>
+
+      {toast && <div className="no-print fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-400 text-[#07101E] font-bold text-sm px-4 py-2 rounded-full shadow-xl">{toast}</div>}
+
+      {modal?.type === "sale" && (data.customers.length === 0
+        ? <NeedPersonFirst kind="customer" onClose={() => setModal(null)} onGo={() => { setModal(null); setTab("customers"); }} />
+        : <InvoiceForm kind="sale" partners={data.customers} banks={raw.banks} products={products} onClose={() => setModal(null)} onSubmit={f => { addSale(f); setModal(null); }} />)}
+      {modal?.type === "purchase" && (data.suppliers.length === 0
+        ? <NeedPersonFirst kind="supplier" onClose={() => setModal(null)} onGo={() => { setModal(null); setTab("suppliers"); }} />
+        : <InvoiceForm kind="purchase" partners={data.suppliers} banks={raw.banks} products={products} accounts={data.accounts.filter(a => a.type === "expense")} onClose={() => setModal(null)} onSubmit={f => { addPurchase(f); setModal(null); }} />)}
+      {modal?.type === "customer" && <PersonForm kind="customer" onClose={() => setModal(null)} onSubmit={f => { addPerson("customers", f); setModal(null); }} />}
+      {modal?.type === "supplier" && <PersonForm kind="supplier" onClose={() => setModal(null)} onSubmit={f => { addPerson("suppliers", f); setModal(null); }} />}
+      {modal?.type === "employee" && <EmployeeForm employees={data.employees} onClose={() => setModal(null)} onSubmit={f => { addEmployee(f); setModal(null); }} />}
+      {modal?.type === "attendance" && <AttendanceForm employees={data.employees} onClose={() => setModal(null)} onSubmit={f => { addAttendance(f); setModal(null); }} />}
+      {modal?.type === "payroll" && <PayrollForm employees={data.employees} currency={currency} onClose={() => setModal(null)} onSubmit={f => { addPayrollRun(f); setModal(null); }} />}
+      {modal?.type === "bank" && <BankForm onClose={() => setModal(null)} onSubmit={f => { addBank(f); setModal(null); }} />}
+      {modal?.type === "product" && <ProductForm onClose={() => setModal(null)} onSubmit={f => { addProduct(f); setModal(null); }} />}
+      {modal?.type === "transaction" && <TransactionForm accounts={postableAccounts} currency={currency} onClose={() => setModal(null)} onSubmit={tx => { addTransaction(tx); setModal(null); }} />}
+      {modal?.type === "user" && <UserForm users={raw.users} onClose={() => setModal(null)} onSubmit={u => { addUser(u); setModal(null); }} />}
+      {modal?.type === "printInvoice" && (
+        <InvoicePrintModal
+          invoice={modal.invoice} kind={modal.kind} company={raw.company} currency={currency}
+          partner={(modal.kind === "sale" ? data.customers : data.suppliers).find(p => p.id === (modal.kind === "sale" ? modal.invoice.customerId : modal.invoice.supplierId))}
+          bank={raw.banks.find(b => b.id === modal.invoice.bankId)}
+          onClose={() => setModal(null)}
+        />
+      )}
+
+      {confirmReset && (
+        <Modal title={t("reset_title")} onClose={() => setConfirmReset(false)}>
+          <div className="flex items-start gap-3 text-sm text-slate-300">
+            <span className="text-rose-300 mt-0.5">{Ic("alert", { size: 20 })}</span>
+            <p>{t("reset_body")}</p>
+          </div>
+          <div className="flex justify-end gap-2 pt-5"><GhostBtn onClick={() => setConfirmReset(false)}>{t("btn_cancel")}</GhostBtn><DangerBtn onClick={resetAll}>{t("reset_confirm")}</DangerBtn></div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function NeedPersonFirst({ kind, onClose, onGo }) {
+  const t = useT();
+  return (
+    <Modal title={kind === "customer" ? t("inv_needPersonTitleCustomer") : t("inv_needPersonTitleSupplier")} onClose={onClose}>
+      <p className="text-sm text-slate-400 mb-4">{kind === "customer" ? t("inv_needPersonBodyCustomer") : t("inv_needPersonBodySupplier")}</p>
+      <div className="flex justify-end"><PrimaryBtn onClick={onGo}>{kind === "customer" ? t("inv_goToCustomers") : t("inv_goToSuppliers")}</PrimaryBtn></div>
+    </Modal>
+  );
+}
+
+function StripStat({ label, value, color, currency }) {
+  return <div className="flex items-baseline gap-1.5"><span className="text-slate-500">{label}</span><span className={`font-bold ${color}`}>{fmt(value)} {currency}</span></div>;
+}
+
+function SyncBadge({ state }) {
+  const t = useT();
+  const map = {
+    connecting: { text: t("sync_connecting"), dot: "bg-slate-500" },
+    saving: { text: t("sync_saving"), dot: "bg-amber-300 animate-pulse" },
+    synced: { text: t("sync_synced"), dot: "bg-emerald-300" },
+    offline: { text: t("sync_offline"), dot: "bg-rose-300" },
+  };
+  const s = map[state] || map.connecting;
+  return <div className="ms-auto flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${s.dot}`}></span><span className="text-slate-400">{s.text}</span></div>;
+}
+
+function MiniBarChart({ rows }) {
+  const t = useT();
+  const max = Math.max(1, ...rows.flatMap(r => [r.sales, r.purchases]));
+  if (rows.length === 0) return <div className="text-slate-600 text-sm py-10 text-center">{t("dash_noChart")}</div>;
+  return (
+    <div className="flex items-end gap-4 h-56 pt-4">
+      {rows.map(r => (
+        <div key={r.month} className="flex-1 flex flex-col items-center gap-2">
+          <div className="flex items-end gap-1 h-44">
+            <div className="w-4 rounded-t bg-cyan-400" style={{ height: `${(r.sales / max) * 100}%` }}></div>
+            <div className="w-4 rounded-t bg-rose-400" style={{ height: `${(r.purchases / max) * 100}%` }}></div>
+          </div>
+          <span className="text-[10px] text-slate-500 tabular">{r.month}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Dashboard({ data, totals, currency, company, products }) {
+  const t = useT();
+  const months = useMemo(() => {
+    const map = {};
+    data.salesInvoices.forEach(i => { const m = i.date.slice(0, 7); map[m] = map[m] || { month: m, sales: 0, purchases: 0 }; map[m].sales += invoiceTotal(i); });
+    data.purchaseInvoices.forEach(i => { const m = i.date.slice(0, 7); map[m] = map[m] || { month: m, sales: 0, purchases: 0 }; map[m].purchases += invoiceTotal(i); });
+    return Object.values(map).sort((a, b) => a.month.localeCompare(b.month));
+  }, [data]);
+
+  const topCustomers = useMemo(() => {
+    const byC = {};
+    data.salesInvoices.forEach(i => { byC[i.customerId] = (byC[i.customerId] || 0) + invoiceTotal(i); });
+    return Object.entries(byC).map(([id, total]) => ({ name: data.customers.find(c => c.id === id)?.name || "—", total })).sort((a, b) => b.total - a.total).slice(0, 5);
+  }, [data]);
+  const lowStock = useMemo(() => (products || []).filter(p => p.stock <= 5), [products]);
+
+  const cards = [
+    { label: t("dash_totalSales"), value: `${fmt(totals.salesTotal)} ${currency}`, icon: "up", color: "text-cyan-300" },
+    { label: t("dash_totalPurchases"), value: `${fmt(totals.purchasesTotal)} ${currency}`, icon: "down", color: "text-rose-300" },
+    { label: t("dash_cash"), value: `${fmt(totals.cash)} ${currency}`, icon: "wallet", color: "text-emerald-300" },
+    { label: t("dash_employeesCount"), value: `${data.employees.length}`, icon: "briefcase", color: "text-amber-300" },
+  ];
+  const isEmpty = data.salesInvoices.length === 0 && data.purchaseInvoices.length === 0 && data.customers.length === 0;
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-black text-slate-50">{t("dash_title")}</h1>
+        <p className="text-slate-500 text-sm mt-1">{t("dash_subtitle")} {company?.name}</p>
+      </div>
+
+      {isEmpty && (
+        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-5 text-sm text-slate-300">
+          <div className="font-bold text-cyan-300 mb-1">{t("dash_emptyTitle")}</div>
+          {t("dash_emptyBody")}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {cards.map(c => (
+          <div key={c.label} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+            <span className={c.color}>{Ic(c.icon, { size: 20 })}</span>
+            <div className="mt-3 text-2xl font-black tabular text-slate-50">{c.value}</div>
+            <div className="text-xs text-slate-400 mt-1">{c.label}</div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="font-bold text-slate-200">{t("dash_chartTitle")}</h2>
+          <div className="flex items-center gap-4 text-xs text-slate-400">
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-400 inline-block"></span>{t("dash_sales")}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block"></span>{t("dash_purchases")}</span>
+          </div>
+        </div>
+        <MiniBarChart rows={months} />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+          <h2 className="font-bold text-slate-200 mb-3">{t("dash_topCustomers")}</h2>
+          {topCustomers.length === 0 ? <div className="text-slate-600 text-sm">{t("dash_noData")}</div> : (
+            <div className="space-y-2">
+              {topCustomers.map(c => (
+                <div key={c.name} className="flex items-center justify-between text-sm border-b border-white/5 pb-2 last:border-0">
+                  <span className="text-slate-300">{c.name}</span>
+                  <span className="tabular font-bold text-cyan-300">{fmt(c.total)} {currency}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+          <h2 className="font-bold text-slate-200 mb-3">{t("dash_lowStock")}</h2>
+          {lowStock.length === 0 ? <div className="text-slate-600 text-sm">{t("dash_noData")}</div> : (
+            <div className="space-y-2">
+              {lowStock.map(p => (
+                <div key={p.id} className="flex items-center justify-between text-sm border-b border-white/5 pb-2 last:border-0">
+                  <span className="text-slate-300">{p.name}</span>
+                  <span className="tabular font-bold text-rose-300">{fmt(p.stock)} {p.unit}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TYPE_LABEL = { asset: ["أصول", "Asset"], liability: ["خصوم", "Liability"], equity: ["حقوق ملكية", "Equity"], revenue: ["إيرادات", "Revenue"], expense: ["مصروفات", "Expense"] };
+const TYPE_COLOR = { asset: "text-cyan-300", liability: "text-rose-300", equity: "text-violet-300", revenue: "text-emerald-300", expense: "text-amber-300" };
+
+function EditableBalance({ value, onSave, currency }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(value);
+  useEffect(() => setVal(value), [value]);
+  if (!editing) {
+    return (
+      <button onClick={() => setEditing(true)} className="no-print flex items-center gap-1.5 tabular font-bold text-slate-200 hover:text-cyan-300 group">
+        {fmt(value)} {currency}
+        <span className="opacity-0 group-hover:opacity-100 text-slate-500">{Ic("pencil", { size: 12 })}</span>
+      </button>
+    );
+  }
+  return (
+    <form className="flex items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); onSave(val); setEditing(false); }}>
+      <input autoFocus type="number" className="w-28 bg-[#0F1729] border border-cyan-400/50 rounded-md px-2 py-1 text-sm text-slate-100 tabular outline-none" value={val} onChange={e => setVal(e.target.value)} onBlur={() => { onSave(val); setEditing(false); }} />
+      <span className="text-xs text-slate-500">{currency}</span>
+    </form>
+  );
+}
+
+function AccountsTree({ accounts, currency, onEdit, isAdmin }) {
+  const t = useT(); const { lang } = useLang();
+  const accName = (a) => lang === "en" ? (a.nameEn || a.name) : a.name;
+  const roots = accounts.filter(a => a.type === "root");
+  const [open, setOpen] = useState(() => Object.fromEntries(roots.map(r => [r.id, true])));
+  return (
+    <div>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div><h1 className="text-2xl font-black text-slate-50">{t("acc_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("acc_subtitle")}</p></div>
+        <div className="no-print text-xs text-slate-500 bg-white/5 rounded-lg px-3 py-2 max-w-xs">{t("acc_hint")}</div>
+      </div>
+      <div className="rounded-2xl border border-white/5 bg-[#111B2E] divide-y divide-white/5">
+        {roots.map(root => {
+          const children = accounts.filter(a => a.parentId === root.id);
+          const total = children.reduce((s, c) => s + (c.balance || 0), 0);
+          return (
+            <div key={root.id}>
+              <button onClick={() => setOpen(o => ({ ...o, [root.id]: !o[root.id] }))} className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500">{Ic(open[root.id] ? "chevDown" : "chevRight", { size: 16 })}</span>
+                  <span className="font-black text-slate-100">{root.code} · {accName(root)}</span>
+                </div>
+                <span className={`tabular font-bold ${TYPE_COLOR[children[0]?.type] || "text-slate-300"}`}>{fmt(total)} {currency}</span>
+              </button>
+              {open[root.id] && (
+                <div className="pb-2">
+                  {children.map(c => (
+                    <div key={c.id} className="flex items-center justify-between px-5 py-2.5 pr-12 text-sm hover:bg-white/[0.02]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-600 text-xs">{c.code}</span>
+                        <span className="text-slate-300">{accName(c)}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 ${TYPE_COLOR[c.type]}`}>{TYPE_LABEL[c.type][lang === "en" ? 1 : 0]}</span>
+                        {!c.editable && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-slate-500">{t("acc_auto")}</span>}
+                      </div>
+                      {c.editable && isAdmin ? <EditableBalance value={c.balance} currency={currency} onSave={(v) => onEdit(c.id, v)} /> : <span className="tabular font-bold text-slate-200">{fmt(c.balance)} {currency}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ================= transactions ================= */
+function TransactionsPage({ transactions, accounts, currency, onAdd, onDelete }) {
+  const t = useT(); const { lang } = useLang();
+  const accName = (id) => { const a = accounts.find(a => a.id === id); return a ? (lang === "en" ? (a.nameEn || a.name) : a.name) : "—"; };
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("swap", { size: 22 })}</span> {t("tx_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("tx_subtitle")}</p></div>
+        <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("tx_new")}</PrimaryBtn>
+      </div>
+      <div className="space-y-3">
+        {transactions.map(tx => {
+          const isUsd = tx.currency === "usd";
+          const rate = isUsd ? (Number(tx.exchangeRate) || 1) : 1;
+          const dTotal = tx.lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
+          return (
+            <div key={tx.id} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="font-bold text-slate-100 flex items-center gap-2">
+                    {tx.memo}
+                    {isUsd && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-400/10 text-cyan-300">USD @ {rate}</span>}
+                  </div>
+                  <div className="text-xs text-slate-500 tabular mt-0.5">{tx.date}</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-left">
+                    {isUsd && <div className="tabular text-xs text-slate-500">${fmt(dTotal)}</div>}
+                    <span className="tabular font-bold text-cyan-300">{fmt(dTotal * rate)} {currency}</span>
+                  </div>
+                  <button onClick={() => onDelete(tx.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
+                </div>
+              </div>
+              <div className="mt-3 border-t border-white/5 pt-3 space-y-1.5">
+                {tx.lines.map((l, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-400">{accName(l.accountId)}</span>
+                    <span className="tabular text-slate-300">
+                      {Number(l.debit) > 0 && <span className="text-emerald-300">{t("tx_debit")} {fmt(l.debit * rate)}</span>}
+                      {Number(l.credit) > 0 && <span className="text-rose-300">{t("tx_credit")} {fmt(l.credit * rate)}</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {transactions.length === 0 && <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-slate-600 text-sm">{t("tx_empty")}</div>}
+      </div>
+    </div>
+  );
+}
+
+function TransactionForm({ accounts, currency, onClose, onSubmit }) {
+  const t = useT(); const { lang } = useLang();
+  const accName = (a) => lang === "en" ? (a.nameEn || a.name) : a.name;
+  const [memo, setMemo] = useState("");
+  const [date, setDate] = useState(today());
+  const [txCurrency, setTxCurrency] = useState("local");
+  const [exchangeRate, setExchangeRate] = useState("");
+  const [lines, setLines] = useState([{ accountId: accounts[0]?.id || "", debit: "", credit: "" }, { accountId: accounts[1]?.id || "", debit: "", credit: "" }]);
+  const debitTotal = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
+  const creditTotal = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
+  const balanced = debitTotal > 0 && debitTotal === creditTotal;
+  const isUsd = txCurrency === "usd";
+  const rateValid = !isUsd || Number(exchangeRate) > 0;
+  const valid = memo.trim() && balanced && rateValid;
+  function updateLine(i, patch) { setLines(ls => ls.map((l, idx) => idx === i ? { ...l, ...patch } : l)); }
+  function addLine() { setLines(ls => [...ls, { accountId: accounts[0]?.id || "", debit: "", credit: "" }]); }
+  function removeLine(i) { setLines(ls => ls.filter((_, idx) => idx !== i)); }
+  return (
+    <Modal title={t("tx_new_title")} onClose={onClose} wide>
+      <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (valid) onSubmit({ date, memo, currency: txCurrency, exchangeRate: isUsd ? Number(exchangeRate) : undefined, lines: lines.filter(l => (Number(l.debit) || Number(l.credit))) }); }}>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("tx_memo")}><input className={inputCls} value={memo} onChange={e => setMemo(e.target.value)} /></Field>
+          <Field label={t("common_date")}><input type="date" className={inputCls} value={date} onChange={e => setDate(e.target.value)} /></Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("tx_currency")}>
+            <select className={inputCls} value={txCurrency} onChange={e => setTxCurrency(e.target.value)}>
+              <option value="local">{t("tx_currency_local")}</option>
+              <option value="usd">{t("tx_currency_usd")}</option>
+            </select>
+          </Field>
+          {isUsd && (
+            <Field label={t("tx_exchangeRate")}>
+              <input type="number" min={0} step="0.01" className={inputCls} value={exchangeRate} onChange={e => setExchangeRate(e.target.value)} placeholder="e.g. 49.50" />
+            </Field>
+          )}
+        </div>
+        <div className="space-y-2">
+          <div className="text-sm text-slate-400">{t("tx_lines")} {isUsd && `(${t("tx_currency_usd")})`}</div>
+          {lines.map((l, i) => (
+            <div key={i} className="grid grid-cols-[1fr_110px_110px_32px] gap-2 items-center">
+              <select className={inputCls} value={l.accountId} onChange={e => updateLine(i, { accountId: e.target.value })}>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.code} · {accName(a)}</option>)}
+              </select>
+              <input type="number" min={0} placeholder={t("tx_debit")} className={inputCls} value={l.debit} onChange={e => updateLine(i, { debit: e.target.value, credit: e.target.value ? "" : l.credit })} />
+              <input type="number" min={0} placeholder={t("tx_credit")} className={inputCls} value={l.credit} onChange={e => updateLine(i, { credit: e.target.value, debit: e.target.value ? "" : l.debit })} />
+              <button type="button" onClick={() => removeLine(i)} className="text-slate-600 hover:text-rose-400 justify-self-center">{Ic("trash", { size: 15 })}</button>
+            </div>
+          ))}
+          <button type="button" onClick={addLine} className="text-cyan-300 text-sm font-bold flex items-center gap-1 pt-1">{Ic("plus", { size: 14 })} {t("tx_addLine")}</button>
+        </div>
+        <div className={`rounded-lg px-3 py-2 text-sm font-bold flex justify-between flex-wrap gap-1 ${balanced ? "bg-emerald-400/10 text-emerald-300" : "bg-rose-400/10 text-rose-300"}`}>
+          <span>{t("tx_debit")}: {fmt(debitTotal)}</span><span>{t("tx_credit")}: {fmt(creditTotal)}</span><span>{balanced ? t("tx_balanced") : t("tx_unbalanced")}</span>
+        </div>
+        {isUsd && rateValid && balanced && (
+          <div className="rounded-lg px-3 py-2 text-sm font-bold bg-cyan-400/10 text-cyan-300 flex justify-between">
+            <span>{t("tx_convertedTotal")}</span><span className="tabular">{fmt(debitTotal * Number(exchangeRate))} {currency}</span>
+          </div>
+        )}
+        <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ================= invoices (with line items) ================= */
+function ItemsEditor({ items, setItems, currency, products, priceField }) {
+  const t = useT();
+  function update(i, patch) { setItems(its => its.map((it, idx) => idx === i ? { ...it, ...patch } : it)); }
+  function add() { setItems(its => [...its, { id: uid(), desc: "", qty: 1, price: "" }]); }
+  function remove(i) { setItems(its => its.filter((_, idx) => idx !== i)); }
+  function pickProduct(i, productId) {
+    if (!productId) { update(i, { productId: undefined }); return; }
+    const p = products.find(p => p.id === productId);
+    if (p) update(i, { productId: p.id, desc: p.name, price: p[priceField] || 0 });
+  }
+  const total = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0);
+  const hasProducts = products && products.length > 0;
+  return (
+    <div className="space-y-2">
+      <div className="text-sm text-slate-400">{t("inv_items")}</div>
+      <div className="grid grid-cols-[1fr_70px_100px_90px_32px] gap-2 text-xs text-slate-500 px-1">
+        <span>{t("common_description")}</span><span>{t("common_qty")}</span><span>{t("common_price")}</span><span>{t("common_total")}</span><span></span>
+      </div>
+      {items.map((it, i) => (
+        <div key={it.id} className="space-y-1">
+          {hasProducts && (
+            <select className={inputCls + " text-xs"} value={it.productId || ""} onChange={e => pickProduct(i, e.target.value)}>
+              <option value="">— {t("stock_manualItem")} —</option>
+              {products.map(p => <option key={p.id} value={p.id}>{p.sku ? p.sku + " · " : ""}{p.name} ({fmt(p.stock)} {p.unit})</option>)}
+            </select>
+          )}
+          <div className="grid grid-cols-[1fr_70px_100px_90px_32px] gap-2 items-center">
+            <input className={inputCls} value={it.desc} onChange={e => update(i, { desc: e.target.value })} placeholder={t("common_description")} disabled={!!it.productId} />
+            <input type="number" min={0} className={inputCls} value={it.qty} onChange={e => update(i, { qty: e.target.value })} />
+            <input type="number" min={0} className={inputCls} value={it.price} onChange={e => update(i, { price: e.target.value })} />
+            <div className="text-sm tabular text-slate-300 text-center">{fmt((Number(it.qty) || 0) * (Number(it.price) || 0))}</div>
+            <button type="button" onClick={() => remove(i)} className="text-slate-600 hover:text-rose-400 justify-self-center">{Ic("trash", { size: 15 })}</button>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={add} className="text-cyan-300 text-sm font-bold flex items-center gap-1 pt-1">{Ic("plus", { size: 14 })} {t("inv_addItem")}</button>
+      <div className="flex justify-between items-center rounded-lg bg-white/5 px-3 py-2 mt-2 font-bold">
+        <span className="text-sm text-slate-300">{t("inv_grandTotal")}</span>
+        <span className="tabular text-cyan-300">{fmt(total)} {currency}</span>
+      </div>
+    </div>
+  );
+}
+
+function InvoiceForm({ kind, partners, banks, products, accounts, onClose, onSubmit }) {
+  const t = useT();
+  const isSale = kind === "sale";
+  const [partnerId, setPartnerId] = useState(partners[0]?.id || "");
+  const [date, setDate] = useState(today());
+  const [status, setStatus] = useState("غير مدفوعة");
+  const [bankId, setBankId] = useState(banks?.[0]?.id || "");
+  const [accountId, setAccountId] = useState(accounts?.[0]?.id || "");
+  const [items, setItems] = useState([{ id: uid(), desc: "", qty: 1, price: "" }]);
+  const total = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0);
+  const valid = partnerId && total > 0 && items.every(it => it.desc.trim());
+
+  function submit(e) {
+    e.preventDefault();
+    if (!valid) return;
+    const cleanItems = items.map(it => ({ id: it.id, productId: it.productId, desc: it.desc, qty: Number(it.qty) || 0, price: Number(it.price) || 0 }));
+    const base = { date, status, items: cleanItems };
+    if (isSale) onSubmit({ ...base, customerId: partnerId, bankId: status === "مدفوعة" ? bankId : undefined });
+    else onSubmit({ ...base, supplierId: partnerId, accountId, bankId: status === "مدفوعة" ? bankId : undefined });
+  }
+
+  return (
+    <Modal title={isSale ? t("inv_new_sale_title") : t("inv_new_purchase_title")} onClose={onClose} wide>
+      <form className="space-y-4" onSubmit={submit}>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={isSale ? t("inv_customer") : t("inv_supplier")}>
+            <select className={inputCls} value={partnerId} onChange={e => setPartnerId(e.target.value)}>
+              {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </Field>
+          <Field label={t("common_date")}><input type="date" className={inputCls} value={date} onChange={e => setDate(e.target.value)} /></Field>
+        </div>
+
+        <ItemsEditor items={items} setItems={setItems} currency="" products={products} priceField={isSale ? "salePrice" : "costPrice"} />
+
+        {!isSale && (
+          <Field label={t("inv_expenseAccount")}>
+            <select className={inputCls} value={accountId} onChange={e => setAccountId(e.target.value)}>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </Field>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("inv_paymentStatus")}>
+            <select className={inputCls} value={status} onChange={e => setStatus(e.target.value)}>
+              <option value="غير مدفوعة">{t("status_unpaid")}</option>
+              <option value="مدفوعة">{t("status_paid")}</option>
+            </select>
+          </Field>
+          {status === "مدفوعة" && banks && banks.length > 0 && (
+            <Field label={t("inv_paidVia")}>
+              <select className={inputCls} value={bankId} onChange={e => setBankId(e.target.value)}>
+                {banks.map(b => <option key={b.id} value={b.id}>{b.bankName}</option>)}
+              </select>
+            </Field>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
+      </form>
+    </Modal>
+  );
+}
+
+function InvoicePrintModal({ invoice, kind, company, currency, partner, bank, onClose }) {
+  const t = useT();
+  const isSale = kind === "sale";
+  const total = invoiceTotal(invoice);
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print-overlay" onClick={onClose}>
+      <div className="print-area bg-white text-slate-900 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8" onClick={e => e.stopPropagation()}>
+        <div className="no-print flex justify-end gap-2 mb-4">
+          <GhostBtn onClick={onClose}>{t("btn_close")}</GhostBtn>
+          <PrimaryBtn onClick={() => window.print()}>{Ic("printer", { size: 15 })} {t("btn_print")}</PrimaryBtn>
+        </div>
+
+        <div className="flex items-start justify-between border-b border-slate-200 pb-4 mb-4">
+          <div>
+            <div className="text-xl font-black">{company?.name}</div>
+            <div className="text-sm text-slate-500">{company?.activity}</div>
+            <div className="text-xs text-slate-500 mt-1">{company?.phone} · {company?.address}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-black">{isSale ? (t("inv_salesTitle")) : (t("inv_purchasesTitle"))}</div>
+            <div className="text-sm text-slate-600 tabular">#{invoice.number}</div>
+            <div className="text-xs text-slate-500 tabular">{invoice.date}</div>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <div className="text-xs text-slate-500 mb-1">{t("inv_billTo")}</div>
+          <div className="font-bold">{partner?.name}</div>
+          <div className="text-xs text-slate-500">{partner?.phone} {partner?.email ? "· " + partner.email : ""}</div>
+        </div>
+
+        <table className="w-full text-sm mb-4">
+          <thead><tr className="border-b border-slate-300 text-xs text-slate-500"><th className="text-right py-2">{t("common_description")}</th><th className="text-right py-2">{t("common_qty")}</th><th className="text-right py-2">{t("common_price")}</th><th className="text-left py-2">{t("common_total")}</th></tr></thead>
+          <tbody>
+            {(invoice.items || []).map(it => (
+              <tr key={it.id} className="border-b border-slate-100">
+                <td className="py-2">{it.desc}</td>
+                <td className="py-2 tabular">{it.qty}</td>
+                <td className="py-2 tabular">{fmt(it.price)}</td>
+                <td className="py-2 text-left tabular">{fmt(it.qty * it.price)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="flex justify-end">
+          <div className="w-56">
+            <div className="flex justify-between font-black text-lg border-t border-slate-300 pt-2"><span>{t("inv_grandTotal")}</span><span className="tabular">{fmt(total)} {currency}</span></div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-center justify-between text-sm">
+          <StatusPill status={invoice.status} />
+          {bank && <div className="text-xs text-slate-500">{t("inv_paidVia")}: {bank.bankName} · {bank.accountNumber}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InvoiceTable({ kind, rows, who, whoKey, currency, onAdd, onDelete, onToggle, onPrint, banks, accounts }) {
+  const t = useT();
+  const isSale = kind === "sale";
+  const whoName = id => who.find(w => w.id === id)?.name || "—";
+  const total = rows.reduce((s, r) => s + invoiceTotal(r), 0);
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic(isSale ? "fileText" : "fileMinus", { size: 22 })}</span> {isSale ? t("inv_salesTitle") : t("inv_purchasesTitle")}</h1><p className="text-slate-500 text-sm mt-1">{rows.length} · {fmt(total)} {currency}</p></div>
+        <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("inv_new")}</PrimaryBtn>
+      </div>
+      <div className="rounded-2xl border border-white/5 bg-[#111B2E] overflow-x-auto">
+        <table className="w-full text-sm min-w-[760px]">
+          <thead><tr className="text-slate-500 text-xs border-b border-white/5">
+            <th className="text-right font-bold px-5 py-3">{t("inv_number")}</th><th className="text-right font-bold px-5 py-3">{isSale ? t("inv_customer") : t("inv_supplier")}</th>
+            <th className="text-right font-bold px-5 py-3">{t("inv_items")}</th><th className="text-right font-bold px-5 py-3">{t("common_date")}</th>
+            <th className="text-right font-bold px-5 py-3">{t("common_total")}</th><th className="text-right font-bold px-5 py-3">{t("common_status")}</th><th className="px-5 py-3"></th>
+          </tr></thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
+                <td className="px-5 py-3 font-bold text-slate-300 tabular">{r.number}</td>
+                <td className="px-5 py-3 text-slate-300">{whoName(r[whoKey])}</td>
+                <td className="px-5 py-3 text-slate-400">{(r.items || []).length} {t("inv_itemsCount")}</td>
+                <td className="px-5 py-3 text-slate-500 tabular">{r.date}</td>
+                <td className="px-5 py-3 tabular font-bold text-slate-100">{fmt(invoiceTotal(r))} {currency}</td>
+                <td className="px-5 py-3"><button onClick={() => onToggle(r.id)}><StatusPill status={r.status} /></button></td>
+                <td className="px-5 py-3 text-left flex items-center gap-2 justify-end">
+                  <button onClick={() => onPrint(r)} className="text-slate-500 hover:text-cyan-300" title={t("btn_print")}>{Ic("printer", { size: 15 })}</button>
+                  <button onClick={() => onDelete(r.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={7} className="text-center text-slate-600 py-10">{isSale ? t("inv_emptySales") : t("inv_emptyPurchases")}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ================= people ================= */
+function PeopleTable({ kind, rows, currency, onAdd, onDelete }) {
+  const t = useT();
+  const isCust = kind === "customer";
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic(isCust ? "users" : "building", { size: 22 })}</span> {isCust ? t("people_customersTitle") : t("people_suppliersTitle")}</h1><p className="text-slate-500 text-sm mt-1">{rows.length} {t("common_records")}</p></div>
+        <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("btn_add")}</PrimaryBtn>
+      </div>
+      <div className="grid md:grid-cols-2 gap-4">
+        {rows.map(p => (
+          <div key={p.id} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5 flex items-start justify-between">
+            <div>
+              <div className="font-bold text-slate-100">{p.name}</div>
+              <div className="text-xs text-slate-500 mt-1">{p.phone}</div>
+              <div className="text-xs text-slate-500">{p.email}</div>
+              <div className={`mt-3 text-sm font-bold tabular ${p.balance > 0 ? "text-amber-300" : "text-slate-500"}`}>{isCust ? t("people_dueFromCustomer") : t("people_dueToSupplier")}: {fmt(p.balance)} {currency}</div>
+            </div>
+            <button onClick={() => onDelete(p.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
+          </div>
+        ))}
+        {rows.length === 0 && <div className="text-slate-600 text-sm">{t("people_empty")}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ================= employees ================= */
+function EmployeesTable({ rows, currency, onAdd, onDelete }) {
+  const t = useT();
+  const [view, setView] = useState("list");
+  const totalSalaries = rows.reduce((s, e) => s + e.salary, 0);
+  const empName = (id) => rows.find(e => e.id === id)?.name || t("emp_topLevel");
+  const byDept = useMemo(() => {
+    const map = {};
+    rows.forEach(e => { const d = e.department || t("emp_noDept"); map[d] = map[d] || []; map[d].push(e); });
+    return map;
+  }, [rows, t]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("briefcase", { size: 22 })}</span> {t("emp_title")}</h1><p className="text-slate-500 text-sm mt-1">{rows.length} · {t("emp_totalSalaries")} {fmt(totalSalaries)} {currency}</p></div>
+        <div className="flex items-center gap-2">
+          <div className="no-print flex rounded-lg bg-white/5 p-1">
+            <button onClick={() => setView("list")} className={`px-3 py-1.5 rounded-md text-xs font-bold ${view === "list" ? "bg-cyan-400 text-[#07101E]" : "text-slate-400"}`}>{t("emp_viewList")}</button>
+            <button onClick={() => setView("org")} className={`px-3 py-1.5 rounded-md text-xs font-bold ${view === "org" ? "bg-cyan-400 text-[#07101E]" : "text-slate-400"}`}>{t("emp_viewOrg")}</button>
+          </div>
+          <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("emp_new")}</PrimaryBtn>
+        </div>
+      </div>
+
+      {view === "list" ? (
+        <div className="rounded-2xl border border-white/5 bg-[#111B2E] overflow-x-auto">
+          <table className="w-full text-sm min-w-[760px]">
+            <thead><tr className="text-slate-500 text-xs border-b border-white/5">
+              <th className="text-right font-bold px-5 py-3">{t("common_name")}</th><th className="text-right font-bold px-5 py-3">{t("emp_position")}</th>
+              <th className="text-right font-bold px-5 py-3">{t("emp_department")}</th><th className="text-right font-bold px-5 py-3">{t("emp_reportsTo")}</th>
+              <th className="text-right font-bold px-5 py-3">{t("common_phone")}</th>
+              <th className="text-right font-bold px-5 py-3">{t("emp_salary")}</th><th className="px-5 py-3"></th>
+            </tr></thead>
+            <tbody>
+              {rows.map(e => (
+                <tr key={e.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
+                  <td className="px-5 py-3 font-bold text-slate-200">{e.name}</td>
+                  <td className="px-5 py-3 text-slate-400">{e.position}</td>
+                  <td className="px-5 py-3 text-slate-400">{e.department || "—"}</td>
+                  <td className="px-5 py-3 text-slate-500">{e.managerId ? empName(e.managerId) : "—"}</td>
+                  <td className="px-5 py-3 text-slate-500 tabular">{e.phone}</td>
+                  <td className="px-5 py-3 tabular font-bold text-emerald-300">{fmt(e.salary)} {currency}</td>
+                  <td className="px-5 py-3 text-left"><button onClick={() => onDelete(e.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button></td>
+                </tr>
+              ))}
+              {rows.length === 0 && <tr><td colSpan={7} className="text-center text-slate-600 py-10">{t("emp_empty")}</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          {Object.entries(byDept).map(([dept, emps]) => (
+            <div key={dept} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+              <div className="font-black text-cyan-300 mb-3">{dept}</div>
+              <div className="space-y-2">
+                {emps.map(e => (
+                  <div key={e.id} className="border-b border-white/5 pb-2 last:border-0">
+                    <div className="font-bold text-slate-200 text-sm">{e.name} <span className="text-slate-500 font-normal">— {e.position}</span></div>
+                    <div className="text-xs text-slate-500">{t("emp_reportsTo")}: {e.managerId ? empName(e.managerId) : t("emp_topLevel")}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          {rows.length === 0 && <div className="text-slate-600 text-sm">{t("emp_empty")}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================= attendance ================= */
+function AttendancePage({ records, employees, onAdd, onDelete }) {
+  const t = useT();
+  const empName = (id) => employees.find(e => e.id === id)?.name || "—";
+  const STATUS_LABEL = { present: t("att_present"), absent: t("att_absent"), leave: t("att_leave") };
+  const STATUS_COLOR = { present: "text-emerald-300 bg-emerald-400/10", absent: "text-rose-300 bg-rose-400/10", leave: "text-amber-300 bg-amber-400/10" };
+  const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("calendar", { size: 22 })}</span> {t("att_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("att_subtitle")}</p></div>
+        <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("att_new")}</PrimaryBtn>
+      </div>
+      <div className="rounded-2xl border border-white/5 bg-[#111B2E] overflow-x-auto">
+        <table className="w-full text-sm min-w-[640px]">
+          <thead><tr className="text-slate-500 text-xs border-b border-white/5">
+            <th className="text-right font-bold px-5 py-3">{t("att_employee")}</th><th className="text-right font-bold px-5 py-3">{t("common_date")}</th>
+            <th className="text-right font-bold px-5 py-3">{t("att_checkIn")}</th><th className="text-right font-bold px-5 py-3">{t("att_checkOut")}</th>
+            <th className="text-right font-bold px-5 py-3">{t("att_status")}</th><th className="px-5 py-3"></th>
+          </tr></thead>
+          <tbody>
+            {sorted.map(r => (
+              <tr key={r.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
+                <td className="px-5 py-3 font-bold text-slate-200">{empName(r.employeeId)}</td>
+                <td className="px-5 py-3 text-slate-500 tabular">{r.date}</td>
+                <td className="px-5 py-3 text-slate-400 tabular">{r.checkIn || "—"}</td>
+                <td className="px-5 py-3 text-slate-400 tabular">{r.checkOut || "—"}</td>
+                <td className="px-5 py-3"><span className={`text-[11px] px-2 py-1 rounded-full ${STATUS_COLOR[r.status]}`}>{STATUS_LABEL[r.status]}</span></td>
+                <td className="px-5 py-3 text-left"><button onClick={() => onDelete(r.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button></td>
+              </tr>
+            ))}
+            {sorted.length === 0 && <tr><td colSpan={6} className="text-center text-slate-600 py-10">{t("att_empty")}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function AttendanceForm({ employees, onClose, onSubmit }) {
+  const t = useT();
+  const [f, setF] = useState({ employeeId: employees[0]?.id || "", date: today(), checkIn: "09:00", checkOut: "17:00", status: "present" });
+  const valid = f.employeeId && f.date;
+  return (
+    <Modal title={t("att_newTitle")} onClose={onClose}>
+      <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (valid) onSubmit(f); }}>
+        <Field label={t("att_employee")}>
+          <select className={inputCls} value={f.employeeId} onChange={e => setF({ ...f, employeeId: e.target.value })}>
+            {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+          </select>
+        </Field>
+        <Field label={t("common_date")}><input type="date" className={inputCls} value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("att_checkIn")}><input type="time" className={inputCls} value={f.checkIn} onChange={e => setF({ ...f, checkIn: e.target.value })} /></Field>
+          <Field label={t("att_checkOut")}><input type="time" className={inputCls} value={f.checkOut} onChange={e => setF({ ...f, checkOut: e.target.value })} /></Field>
+        </div>
+        <Field label={t("att_status")}>
+          <select className={inputCls} value={f.status} onChange={e => setF({ ...f, status: e.target.value })}>
+            <option value="present">{t("att_present")}</option>
+            <option value="absent">{t("att_absent")}</option>
+            <option value="leave">{t("att_leave")}</option>
+          </select>
+        </Field>
+        <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ================= payroll ================= */
+function PayrollPage({ runs, employees, currency, isAdmin, onAdd, onMarkPaid }) {
+  const t = useT();
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("cash", { size: 22 })}</span> {t("pay_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("pay_subtitle")}</p></div>
+        {isAdmin && <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("pay_new")}</PrimaryBtn>}
+      </div>
+      <div className="space-y-3">
+        {runs.map(run => (
+          <div key={run.id} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="font-bold text-slate-100 tabular">{run.month}</div>
+                <div className="text-xs text-slate-500 mt-0.5">{run.items.length} · {t("pay_total")}: <span className="tabular font-bold text-cyan-300">{fmt(run.total)} {currency}</span></div>
+              </div>
+              {run.status === "مدفوعة"
+                ? <span className="text-[11px] px-2 py-1 rounded-full bg-emerald-400/10 text-emerald-300">{t("pay_paid")}</span>
+                : (isAdmin && <GhostBtn onClick={() => onMarkPaid(run)}>{t("pay_markPaid")}</GhostBtn>)}
+            </div>
+            <div className="mt-3 border-t border-white/5 pt-3 space-y-1.5">
+              {run.items.map((it, i) => {
+                const emp = employees.find(e => e.id === it.employeeId);
+                return (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-400">{emp?.name || "—"}</span>
+                    <span className="tabular text-slate-300">{fmt(it.net)} {currency}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {run.status === "مدفوعة" && <div className="text-xs text-slate-600 mt-3">{t("pay_postedNote")}</div>}
+          </div>
+        ))}
+        {runs.length === 0 && <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-slate-600 text-sm">{t("pay_empty")}</div>}
+      </div>
+    </div>
+  );
+}
+
+function PayrollForm({ employees, currency, onClose, onSubmit }) {
+  const t = useT();
+  const [month, setMonth] = useState(today().slice(0, 7));
+  const [items, setItems] = useState(employees.map(e => ({ employeeId: e.id, base: e.salary, bonus: 0, deduction: 0 })));
+  function update(i, patch) { setItems(its => its.map((it, idx) => idx === i ? { ...it, ...patch } : it)); }
+  const total = items.reduce((s, it) => s + (Number(it.base) || 0) + (Number(it.bonus) || 0) - (Number(it.deduction) || 0), 0);
+  const valid = items.length > 0 && month;
+
+  function submit(e) {
+    e.preventDefault();
+    if (!valid) return;
+    const cleanItems = items.map(it => ({ ...it, base: Number(it.base) || 0, bonus: Number(it.bonus) || 0, deduction: Number(it.deduction) || 0, net: (Number(it.base) || 0) + (Number(it.bonus) || 0) - (Number(it.deduction) || 0) }));
+    onSubmit({ month, date: today(), items: cleanItems, total: cleanItems.reduce((s, it) => s + it.net, 0) });
+  }
+
+  if (employees.length === 0) {
+    return <Modal title={t("pay_newTitle")} onClose={onClose}><p className="text-sm text-slate-400">{t("pay_noEmployees")}</p></Modal>;
+  }
+
+  return (
+    <Modal title={t("pay_newTitle")} onClose={onClose} wide>
+      <form className="space-y-4" onSubmit={submit}>
+        <Field label={t("pay_month")}><input type="month" className={inputCls} value={month} onChange={e => setMonth(e.target.value)} /></Field>
+        <div className="space-y-2">
+          <div className="grid grid-cols-[1.3fr_1fr_1fr_1fr_1fr] gap-2 text-xs text-slate-500 px-1">
+            <span>{t("common_name")}</span><span>{t("pay_base")}</span><span>{t("pay_bonus")}</span><span>{t("pay_deduction")}</span><span>{t("pay_net")}</span>
+          </div>
+          {items.map((it, i) => {
+            const emp = employees.find(e => e.id === it.employeeId);
+            const net = (Number(it.base) || 0) + (Number(it.bonus) || 0) - (Number(it.deduction) || 0);
+            return (
+              <div key={it.employeeId} className="grid grid-cols-[1.3fr_1fr_1fr_1fr_1fr] gap-2 items-center">
+                <span className="text-sm text-slate-300 truncate">{emp?.name}</span>
+                <input type="number" min={0} className={inputCls} value={it.base} onChange={e => update(i, { base: e.target.value })} />
+                <input type="number" min={0} className={inputCls} value={it.bonus} onChange={e => update(i, { bonus: e.target.value })} />
+                <input type="number" min={0} className={inputCls} value={it.deduction} onChange={e => update(i, { deduction: e.target.value })} />
+                <div className="text-sm tabular font-bold text-emerald-300 text-center">{fmt(net)}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex justify-between items-center rounded-lg bg-white/5 px-3 py-2 font-bold">
+          <span className="text-sm text-slate-300">{t("pay_total")}</span>
+          <span className="tabular text-cyan-300">{fmt(total)} {currency}</span>
+        </div>
+        <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ================= banks ================= */
+function BanksPage({ banks, currency, onAdd, onDelete, onEdit, isAdmin }) {
+  const t = useT();
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("bank", { size: 22 })}</span> {t("bank_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("bank_subtitle")}</p></div>
+        <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("bank_new")}</PrimaryBtn>
+      </div>
+      <div className="no-print text-xs text-slate-500 bg-white/5 rounded-lg px-3 py-2 mb-4">{t("bank_hint")}</div>
+      <div className="grid md:grid-cols-2 gap-4">
+        {banks.map(b => (
+          <div key={b.id} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="font-bold text-slate-100">{b.bankName}</div>
+                <div className="text-xs text-slate-500 mt-1 tabular">{t("bank_accountNumber")}: {b.accountNumber}</div>
+                {b.iban && <div className="text-xs text-slate-500 tabular">IBAN: {b.iban}</div>}
+                {b.branch && <div className="text-xs text-slate-500">{b.branch}</div>}
+                {b.notes && <div className="text-xs text-slate-600 mt-1">{b.notes}</div>}
+              </div>
+              <button onClick={() => onDelete(b.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
+            </div>
+            <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+              <span className="text-xs text-slate-500">{t("bank_balance")}</span>
+              {isAdmin ? <EditableBalance value={b.balance} currency={currency} onSave={(v) => onEdit(b.id, v)} /> : <span className="tabular font-bold text-slate-200">{fmt(b.balance)} {currency}</span>}
+            </div>
+          </div>
+        ))}
+        {banks.length === 0 && <div className="text-slate-600 text-sm">{t("bank_empty")}</div>}
+      </div>
+    </div>
+  );
+}
+
+function BankForm({ onClose, onSubmit }) {
+  const t = useT();
+  const [f, setF] = useState({ bankName: "", accountNumber: "", iban: "", branch: "", notes: "" });
+  const valid = f.bankName && f.accountNumber;
+  return (
+    <Modal title={t("bank_newTitle")} onClose={onClose}>
+      <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (valid) onSubmit(f); }}>
+        <Field label={t("bank_bankName")}><input className={inputCls} value={f.bankName} onChange={e => setF({ ...f, bankName: e.target.value })} /></Field>
+        <Field label={t("bank_accountNumber")}><input className={inputCls} value={f.accountNumber} onChange={e => setF({ ...f, accountNumber: e.target.value })} /></Field>
+        <Field label={t("bank_iban")}><input className={inputCls} value={f.iban} onChange={e => setF({ ...f, iban: e.target.value })} /></Field>
+        <Field label={t("bank_branch")}><input className={inputCls} value={f.branch} onChange={e => setF({ ...f, branch: e.target.value })} /></Field>
+        <Field label={t("bank_notes")}><input className={inputCls} value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} /></Field>
+        <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ================= inventory ================= */
+function InventoryPage({ products, currency, isAdmin, onAdd, onDelete, onEdit }) {
+  const t = useT();
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("box", { size: 22 })}</span> {t("stock_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("stock_subtitle")}</p></div>
+        <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("stock_new")}</PrimaryBtn>
+      </div>
+      <div className="rounded-2xl border border-white/5 bg-[#111B2E] overflow-x-auto">
+        <table className="w-full text-sm min-w-[720px]">
+          <thead><tr className="text-slate-500 text-xs border-b border-white/5">
+            <th className="text-right font-bold px-5 py-3">{t("stock_sku")}</th><th className="text-right font-bold px-5 py-3">{t("common_name")}</th>
+            <th className="text-right font-bold px-5 py-3">{t("stock_unit")}</th><th className="text-right font-bold px-5 py-3">{t("stock_cost")}</th>
+            <th className="text-right font-bold px-5 py-3">{t("stock_salePrice")}</th><th className="text-right font-bold px-5 py-3">{t("stock_current")}</th><th className="px-5 py-3"></th>
+          </tr></thead>
+          <tbody>
+            {products.map(p => (
+              <tr key={p.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
+                <td className="px-5 py-3 text-slate-400 tabular">{p.sku}</td>
+                <td className="px-5 py-3 font-bold text-slate-200">{p.name}</td>
+                <td className="px-5 py-3 text-slate-500">{p.unit}</td>
+                <td className="px-5 py-3 tabular text-slate-300">{fmt(p.costPrice)} {currency}</td>
+                <td className="px-5 py-3 tabular text-slate-300">{fmt(p.salePrice)} {currency}</td>
+                <td className="px-5 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`tabular font-bold ${p.stock <= 5 ? "text-rose-300" : "text-emerald-300"}`}>{fmt(p.stock)} {p.unit}</span>
+                    {p.stock <= 5 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-400/10 text-rose-300">{t("stock_low")}</span>}
+                  </div>
+                </td>
+                <td className="px-5 py-3 text-left"><button onClick={() => onDelete(p.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button></td>
+              </tr>
+            ))}
+            {products.length === 0 && <tr><td colSpan={7} className="text-center text-slate-600 py-10">{t("stock_empty")}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {isAdmin && products.length > 0 && (
+        <div className="no-print text-xs text-slate-500 bg-white/5 rounded-lg px-3 py-2 mt-4">{t("stock_opening")}: {t("perm_adminOnly")}</div>
+      )}
+    </div>
+  );
+}
+
+function ProductForm({ onClose, onSubmit }) {
+  const t = useT();
+  const [f, setF] = useState({ sku: "", name: "", unit: "", costPrice: "", salePrice: "", openingStock: 0 });
+  const valid = f.name && f.unit;
+  return (
+    <Modal title={t("stock_newTitle")} onClose={onClose}>
+      <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (valid) onSubmit({ ...f, costPrice: Number(f.costPrice) || 0, salePrice: Number(f.salePrice) || 0, openingStock: Number(f.openingStock) || 0 }); }}>
+        <Field label={t("stock_sku")}><input className={inputCls} value={f.sku} onChange={e => setF({ ...f, sku: e.target.value })} /></Field>
+        <Field label={t("common_name")}><input className={inputCls} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("stock_unit")}><input className={inputCls} value={f.unit} onChange={e => setF({ ...f, unit: e.target.value })} placeholder={t("common_qty")} /></Field>
+          <Field label={t("stock_opening")}><input type="number" min={0} className={inputCls} value={f.openingStock} onChange={e => setF({ ...f, openingStock: e.target.value })} /></Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("stock_cost")}><input type="number" min={0} className={inputCls} value={f.costPrice} onChange={e => setF({ ...f, costPrice: e.target.value })} /></Field>
+          <Field label={t("stock_salePrice")}><input type="number" min={0} className={inputCls} value={f.salePrice} onChange={e => setF({ ...f, salePrice: e.target.value })} /></Field>
+        </div>
+        <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ================= users ================= */
+function UsersPage({ users, currentUser, onAdd, onDelete }) {
+  const t = useT();
+  const isAdmin = currentUser.role === "admin";
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("user", { size: 22 })}</span> {t("users_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("users_subtitle")}</p></div>
+        {isAdmin && <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("users_new")}</PrimaryBtn>}
+      </div>
+      <div className="rounded-2xl border border-white/5 bg-[#111B2E] divide-y divide-white/5">
+        {users.map(u => (
+          <div key={u.id} className="flex items-center justify-between px-5 py-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-300 font-bold text-sm">{u.fullName.charAt(0)}</div>
+              <div>
+                <div className="text-sm font-bold text-slate-200">{u.fullName} {u.id === currentUser.id && <span className="text-xs text-cyan-300">({t("users_you")})</span>}</div>
+                <div className="text-xs text-slate-500">@{u.username}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`text-[11px] px-2 py-1 rounded-full ${u.role === "admin" ? "bg-cyan-400/10 text-cyan-300" : "bg-white/5 text-slate-400"}`}>{u.role === "admin" ? t("users_admin") : t("users_user")}</span>
+              {isAdmin && u.id !== currentUser.id && <button onClick={() => onDelete(u.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button>}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="text-xs text-slate-600 mt-4">{t("users_securityNote")}</div>
+    </div>
+  );
+}
+
+function UserForm({ users, onClose, onSubmit }) {
+  const t = useT();
+  const [f, setF] = useState({ fullName: "", username: "", password: "", role: "user" });
+  const [err, setErr] = useState(false);
+  const valid = f.fullName && f.username && f.password.length >= 4;
+  function submit(e) {
+    e.preventDefault();
+    if (users.some(u => u.username === f.username)) { setErr(true); return; }
+    if (valid) onSubmit(f);
+  }
+  return (
+    <Modal title={t("users_newTitle")} onClose={onClose}>
+      <form className="space-y-4" onSubmit={submit}>
+        <Field label={t("users_fullName")}><input className={inputCls} value={f.fullName} onChange={e => setF({ ...f, fullName: e.target.value })} /></Field>
+        <Field label={t("users_username")}><input className={inputCls} value={f.username} onChange={e => { setF({ ...f, username: e.target.value }); setErr(false); }} /></Field>
+        <Field label={t("users_password")}><input type="password" className={inputCls} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} /></Field>
+        <Field label={t("users_role")}>
+          <select className={inputCls} value={f.role} onChange={e => setF({ ...f, role: e.target.value })}>
+            <option value="user">{t("users_user")}</option>
+            <option value="admin">{t("users_admin")}</option>
+          </select>
+        </Field>
+        {err && <div className="text-rose-300 text-sm">{t("auth_usernameTaken")}</div>}
+        <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ================= reports ================= */
+function ReportsPage({ data, journal, currency, company }) {
+  const t = useT();
+  const [sub, setSub] = useState("income");
+  const SUBTABS = [
+    { key: "income", label: t("rep_income") },
+    { key: "balance", label: t("rep_balance") },
+    { key: "trial", label: t("rep_trial") },
+    { key: "journal", label: t("rep_journal") },
+  ];
+  return (
+    <div>
+      <div className="mb-6"><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("report", { size: 22 })}</span> {t("rep_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("rep_subtitle")}</p></div>
+      <div className="no-print flex gap-2 mb-6 flex-wrap">
+        {SUBTABS.map(tb => (
+          <button key={tb.key} onClick={() => setSub(tb.key)} className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ${sub === tb.key ? "bg-cyan-400 text-[#07101E]" : "bg-white/5 text-slate-300 hover:bg-white/10"}`}>{tb.label}</button>
+        ))}
+      </div>
+      {sub === "income" && <IncomeStatement data={data} currency={currency} company={company} />}
+      {sub === "balance" && <BalanceSheet data={data} currency={currency} company={company} />}
+      {sub === "trial" && <TrialBalance data={data} currency={currency} company={company} />}
+      {sub === "journal" && <JournalLedger journal={journal} currency={currency} company={company} />}
+    </div>
+  );
+}
+
+function ReportShell({ title, company, currency, onPrint, children }) {
+  return (
+    <div className="rounded-2xl border border-white/5 bg-[#111B2E] p-6">
+      <PrintHeader company={company} title={title} currency={currency} />
+      <div className="no-print flex items-center justify-between mb-5">
+        <h2 className="font-black text-slate-100 text-lg">{title}</h2>
+        <PrintBtn full onClick={onPrint} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function IncomeStatement({ data, currency, company }) {
+  const t = useT(); const { lang } = useLang();
+  const accName = a => lang === "en" ? (a.nameEn || a.name) : a.name;
+  const revenue = data.accounts.filter(a => a.type === "revenue");
+  const expense = data.accounts.filter(a => a.type === "expense");
+  const revTotal = revenue.reduce((s, a) => s + a.balance, 0);
+  const expTotal = expense.reduce((s, a) => s + a.balance, 0);
+  const net = revTotal - expTotal;
+  return (
+    <ReportShell title={t("rep_income")} company={company} currency={currency} onPrint={() => window.print()}>
+      <table className="w-full text-sm">
+        <thead><tr className="text-slate-500 text-xs border-b border-white/10"><th className="text-right py-2">{t("common_description")}</th><th className="text-left py-2">{t("common_total")} ({currency})</th></tr></thead>
+        <tbody>
+          <tr><td colSpan={2} className="pt-4 pb-1 font-black text-emerald-300">{t("inc_revenue")}</td></tr>
+          {revenue.map(a => <tr key={a.id} className="border-b border-white/5"><td className="py-2 text-slate-300">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
+          <tr className="font-bold"><td className="py-2">{t("inc_totalRevenue")}</td><td className="py-2 text-left tabular text-emerald-300">{fmt(revTotal)}</td></tr>
+          <tr><td colSpan={2} className="pt-6 pb-1 font-black text-amber-300">{t("inc_expense")}</td></tr>
+          {expense.map(a => <tr key={a.id} className="border-b border-white/5"><td className="py-2 text-slate-300">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
+          <tr className="font-bold"><td className="py-2">{t("inc_totalExpense")}</td><td className="py-2 text-left tabular text-amber-300">{fmt(expTotal)}</td></tr>
+        </tbody>
+      </table>
+      <div className={`mt-6 rounded-lg px-4 py-3 flex justify-between items-center font-black ${net >= 0 ? "bg-emerald-400/10 text-emerald-300" : "bg-rose-400/10 text-rose-300"}`}>
+        <span>{net >= 0 ? t("inc_netProfit") : t("inc_netLoss")}</span><span className="tabular">{fmt(Math.abs(net))} {currency}</span>
+      </div>
+    </ReportShell>
+  );
+}
+
+function BalanceSheet({ data, currency, company }) {
+  const t = useT(); const { lang } = useLang();
+  const accName = a => lang === "en" ? (a.nameEn || a.name) : a.name;
+  const assets = data.accounts.filter(a => a.type === "asset");
+  const liabilities = data.accounts.filter(a => a.type === "liability");
+  const equity = data.accounts.filter(a => a.type === "equity");
+  const revenue = data.accounts.filter(a => a.type === "revenue").reduce((s, a) => s + a.balance, 0);
+  const expense = data.accounts.filter(a => a.type === "expense").reduce((s, a) => s + a.balance, 0);
+  const netProfit = revenue - expense;
+  const assetsTotal = assets.reduce((s, a) => s + a.balance, 0);
+  const liabTotal = liabilities.reduce((s, a) => s + a.balance, 0);
+  const equityTotal = equity.reduce((s, a) => s + a.balance, 0) + netProfit;
+  const rightSide = liabTotal + equityTotal;
+  const balanced = Math.abs(assetsTotal - rightSide) < 1;
+  return (
+    <ReportShell title={t("rep_balance")} company={company} currency={currency} onPrint={() => window.print()}>
+      <div className="grid md:grid-cols-2 gap-6">
+        <div>
+          <div className="font-black text-cyan-300 mb-2">{t("bs_assets")}</div>
+          <table className="w-full text-sm"><tbody>
+            {assets.map(a => <tr key={a.id} className="border-b border-white/5"><td className="py-2 text-slate-300">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
+            <tr className="font-bold"><td className="py-2">{t("bs_totalAssets")}</td><td className="py-2 text-left tabular text-cyan-300">{fmt(assetsTotal)}</td></tr>
+          </tbody></table>
+        </div>
+        <div>
+          <div className="font-black text-rose-300 mb-2">{t("bs_liabilities")}</div>
+          <table className="w-full text-sm"><tbody>
+            {liabilities.map(a => <tr key={a.id} className="border-b border-white/5"><td className="py-2 text-slate-300">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
+            <tr className="font-bold"><td className="py-2">{t("bs_totalLiabilities")}</td><td className="py-2 text-left tabular text-rose-300">{fmt(liabTotal)}</td></tr>
+          </tbody></table>
+          <div className="font-black text-violet-300 mb-2 mt-6">{t("bs_equity")}</div>
+          <table className="w-full text-sm"><tbody>
+            {equity.map(a => <tr key={a.id} className="border-b border-white/5"><td className="py-2 text-slate-300">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
+            <tr className="border-b border-white/5"><td className="py-2 text-slate-300">{t("bs_currentProfit")}</td><td className="py-2 text-left tabular">{fmt(netProfit)}</td></tr>
+            <tr className="font-bold"><td className="py-2">{t("bs_totalEquity")}</td><td className="py-2 text-left tabular text-violet-300">{fmt(equityTotal)}</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+      <div className={`mt-6 rounded-lg px-4 py-3 flex justify-between items-center font-black ${balanced ? "bg-emerald-400/10 text-emerald-300" : "bg-amber-400/10 text-amber-300"}`}>
+        <span>{fmt(assetsTotal)} {balanced ? "=" : "≠"} {fmt(rightSide)}</span><span>{balanced ? t("bs_balancedOk") : t("bs_balancedNo")}</span>
+      </div>
+    </ReportShell>
+  );
+}
+
+function TrialBalance({ data, currency, company }) {
+  const t = useT(); const { lang } = useLang();
+  const accName = a => lang === "en" ? (a.nameEn || a.name) : a.name;
+  const rows = data.accounts.filter(a => a.type !== "root");
+  let debitTotal = 0, creditTotal = 0;
+  const lines = rows.map(a => {
+    const n = nature(a.type); let debit = 0, credit = 0;
+    if (n === "debit") { if (a.balance >= 0) debit = a.balance; else credit = -a.balance; }
+    else { if (a.balance >= 0) credit = a.balance; else debit = -a.balance; }
+    debitTotal += debit; creditTotal += credit;
+    return { ...a, debit, credit };
+  });
+  const balanced = Math.abs(debitTotal - creditTotal) < 1;
+  return (
+    <ReportShell title={t("rep_trial")} company={company} currency={currency} onPrint={() => window.print()}>
+      <table className="w-full text-sm">
+        <thead><tr className="text-slate-500 text-xs border-b border-white/10"><th className="text-right py-2">{t("tb_account")}</th><th className="text-right py-2">{t("tb_type")}</th><th className="text-left py-2">{t("tx_debit")}</th><th className="text-left py-2">{t("tx_credit")}</th></tr></thead>
+        <tbody>
+          {lines.map(a => (
+            <tr key={a.id} className="border-b border-white/5">
+              <td className="py-2 text-slate-300">{a.code} · {accName(a)}</td>
+              <td className="py-2 text-slate-500 text-xs">{TYPE_LABEL[a.type][lang === "en" ? 1 : 0]}</td>
+              <td className="py-2 text-left tabular">{a.debit ? fmt(a.debit) : "—"}</td>
+              <td className="py-2 text-left tabular">{a.credit ? fmt(a.credit) : "—"}</td>
+            </tr>
+          ))}
+          <tr className="font-black"><td className="py-3">{t("tb_total")}</td><td></td><td className="py-3 text-left tabular text-cyan-300">{fmt(debitTotal)}</td><td className="py-3 text-left tabular text-cyan-300">{fmt(creditTotal)}</td></tr>
+        </tbody>
+      </table>
+      <div className={`mt-6 rounded-lg px-4 py-3 text-center font-black ${balanced ? "bg-emerald-400/10 text-emerald-300" : "bg-amber-400/10 text-amber-300"}`}>{balanced ? t("tb_balanced") : t("tb_unbalanced")}</div>
+    </ReportShell>
+  );
+}
+
+function JournalLedger({ journal, currency, company }) {
+  const t = useT();
+  return (
+    <ReportShell title={t("rep_journal")} company={company} currency={currency} onPrint={() => window.print()}>
+      <div className="space-y-4">
+        {journal.map(row => (
+          <div key={row.id} className="border-b border-white/5 pb-4 last:border-0">
+            <div className="flex items-center justify-between text-sm mb-1.5"><span className="font-bold text-slate-200">{row.memo}</span><span className="text-slate-500 tabular">{row.date}</span></div>
+            <table className="w-full text-xs"><tbody>
+              {row.lines.map((l, i) => (
+                <tr key={i}>
+                  <td className="py-1 text-slate-400 w-1/2">{l.accountName}</td>
+                  <td className="py-1 text-left tabular w-1/4">{l.debit ? fmt(l.debit) + " " + t("tx_debit") : ""}</td>
+                  <td className="py-1 text-left tabular w-1/4">{l.credit ? fmt(l.credit) + " " + t("tx_credit") : ""}</td>
+                </tr>
+              ))}
+            </tbody></table>
+          </div>
+        ))}
+        {journal.length === 0 && <div className="text-slate-600 text-sm text-center py-10">{t("journal_empty")}</div>}
+      </div>
+    </ReportShell>
+  );
+}
+
+/* ================= settings ================= */
+function SettingsPanel({ company, onSave, onResetClick }) {
+  const t = useT();
+  const [f, setF] = useState(company);
+  const valid = f.name.trim().length > 0;
+  return (
+    <div className="max-w-xl">
+      <div className="mb-6"><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("building2", { size: 22 })}</span> {t("set_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("set_subtitle")}</p></div>
+      <form className="space-y-4 rounded-2xl border border-white/5 bg-[#111B2E] p-5" onSubmit={(e) => { e.preventDefault(); if (valid) onSave(f); }}>
+        <Field label={t("auth_companyName")}><input className={inputCls} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></Field>
+        <Field label={t("set_activity")}><input className={inputCls} value={f.activity} onChange={e => setF({ ...f, activity: e.target.value })} /></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("common_phone")}><input className={inputCls} value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></Field>
+          <Field label={t("set_taxId")}><input className={inputCls} value={f.taxId} onChange={e => setF({ ...f, taxId: e.target.value })} /></Field>
+        </div>
+        <Field label={t("set_address")}><input className={inputCls} value={f.address} onChange={e => setF({ ...f, address: e.target.value })} /></Field>
+        <Field label={t("common_currency")}><input className={inputCls} value={f.currency} onChange={e => setF({ ...f, currency: e.target.value })} /></Field>
+        <div className="flex justify-end pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
+      </form>
+      <div className="mt-6 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-5">
+        <div className="font-bold text-rose-300 mb-1">{t("set_dangerTitle")}</div>
+        <p className="text-sm text-slate-400 mb-3">{t("set_dangerBody")}</p>
+        <DangerBtn onClick={onResetClick}>{Ic("trash", { size: 15 })} {t("set_resetAll")}</DangerBtn>
+      </div>
+    </div>
+  );
+}
+
+/* ================= person / employee forms ================= */
+function PersonForm({ kind, onClose, onSubmit }) {
+  const t = useT();
+  const [f, setF] = useState({ name: "", phone: "", email: "" });
+  const valid = f.name;
+  return (
+    <Modal title={kind === "customer" ? t("people_newCustomer") : t("people_newSupplier")} onClose={onClose}>
+      <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (valid) onSubmit(f); }}>
+        <Field label={t("common_name")}><input className={inputCls} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></Field>
+        <Field label={t("common_phone")}><input className={inputCls} value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></Field>
+        <Field label={t("common_email")}><input className={inputCls} value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></Field>
+        <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
+      </form>
+    </Modal>
+  );
+}
+function EmployeeForm({ employees, onClose, onSubmit }) {
+  const t = useT();
+  const [f, setF] = useState({ name: "", position: "", salary: "", phone: "", hireDate: today(), department: "", managerId: "" });
+  const valid = f.name && f.position && f.salary;
+  return (
+    <Modal title={t("emp_newTitle")} onClose={onClose}>
+      <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (valid) onSubmit(f); }}>
+        <Field label={t("common_name")}><input className={inputCls} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("emp_position")}><input className={inputCls} value={f.position} onChange={e => setF({ ...f, position: e.target.value })} /></Field>
+          <Field label={t("emp_department")}><input className={inputCls} value={f.department} onChange={e => setF({ ...f, department: e.target.value })} /></Field>
+        </div>
+        <Field label={t("emp_manager")}>
+          <select className={inputCls} value={f.managerId} onChange={e => setF({ ...f, managerId: e.target.value })}>
+            <option value="">{t("emp_noManager")}</option>
+            {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+          </select>
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("emp_salary")}><input type="number" min={0} className={inputCls} value={f.salary} onChange={e => setF({ ...f, salary: e.target.value })} /></Field>
+          <Field label={t("emp_hireDate")}><input type="date" className={inputCls} value={f.hireDate} onChange={e => setF({ ...f, hireDate: e.target.value })} /></Field>
+        </div>
+        <Field label={t("common_phone")}><input className={inputCls} value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></Field>
+        <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
+      </form>
+    </Modal>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
+</script>
+</body>
+</html>

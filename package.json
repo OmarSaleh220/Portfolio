@@ -1,0 +1,12 @@
+{
+  "name": "omar-saleh-erp",
+  "version": "1.0.0",
+  "description": "نظام حسابات وفواتير مع لوحة تحكم وقوائم مالية",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
