@@ -123,6 +123,7 @@ const STRINGS = {
   tx_credit: ["دائن", "Credit"],
   tx_memo: ["وصف المعاملة", "Memo"],
   tx_lines: ["بنود القيد — لازم إجمالي المدين = إجمالي الدائن", "Entry lines — total debit must equal total credit"],
+  tx_lineDesc: ["البيان", "Description"],
   tx_addLine: ["إضافة بند", "Add line"],
   tx_balanced: ["القيد متزن ✓", "Entry balanced ✓"],
   tx_unbalanced: ["القيد غير متزن", "Entry not balanced"],
@@ -158,6 +159,8 @@ const STRINGS = {
   inv_goToCustomers: ["روح لصفحة العملاء", "Go to customers"],
   inv_goToSuppliers: ["روح لصفحة الموردين", "Go to suppliers"],
   inv_paidVia: ["تم السداد عبر", "Paid via"],
+  inv_managerSign: ["توقيع المدير المسؤول", "Manager Signature"],
+  inv_accountantSign: ["توقيع المحاسب", "Accountant Signature"],
 
   people_customersTitle: ["العملاء", "Customers"],
   people_suppliersTitle: ["الموردون", "Suppliers"],
@@ -330,6 +333,7 @@ const STRINGS = {
   reset_body: ["هيتم حذف كل الحسابات والفواتير والمعاملات المالية والعملاء والموردين والموظفين والبنوك نهائيًا. اسم الشركة هيفضل زي ما هو. متأكد؟",
     "This will permanently delete all accounts, invoices, transactions, customers, suppliers, employees and banks. The company name will be kept. Are you sure?"],
   reset_confirm: ["نعم، امسح كل شيء", "Yes, erase everything"],
+  footer_credit: ["تم الإنشاء بواسطة Omar Saleh", "Created by Omar Saleh"],
 };
 
 const LangContext = createContext({ lang: "ar", t: (k) => k });
@@ -520,7 +524,7 @@ function buildJournal(base, lang) {
       id: "TX-" + tx.id, date: tx.date, memo: tx.memo + fx,
       lines: tx.lines.map(l => {
         const acc = base.accounts.find(a => a.id === l.accountId);
-        return { accountName: acc ? accName(acc) : "—", debit: (Number(l.debit) || 0) * rate, credit: (Number(l.credit) || 0) * rate };
+        return { accountName: acc ? accName(acc) : "—", desc: l.desc || "", debit: (Number(l.debit) || 0) * rate, credit: (Number(l.credit) || 0) * rate };
       }),
     });
   });
@@ -625,11 +629,13 @@ function CompanySetupModal({ onSave }) {
 }
 
 function AuthCard({ children }) {
+  const t = useT();
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#131B2E] p-7 shadow-2xl">
         {children}
       </div>
+      <div className="text-[11px] text-slate-600 mt-6">{t("footer_credit")}</div>
     </div>
   );
 }
@@ -652,7 +658,7 @@ function FirstAdminScreen({ onCreate }) {
   );
 }
 
-function LoginScreen({ users, onLogin, onGoRegister }) {
+function LoginScreen({ users, onLogin }) {
   const t = useT();
   const [f, setF] = useState({ username: "", password: "" });
   const [err, setErr] = useState(false);
@@ -671,7 +677,6 @@ function LoginScreen({ users, onLogin, onGoRegister }) {
         {err && <div className="text-rose-300 text-sm">{t("auth_invalidLogin")}</div>}
         <PrimaryBtn type="submit" className="w-full justify-center">{t("btn_login")}</PrimaryBtn>
       </form>
-      <div className="text-center text-sm text-slate-500 mt-4">{t("auth_noAccount")} <button onClick={onGoRegister} className="text-cyan-300 font-bold hover:underline">{t("auth_registerLink")}</button></div>
     </AuthCard>
   );
 }
@@ -733,7 +738,6 @@ function App() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [syncState, setSyncState] = useState("connecting");
   const [currentUser, setCurrentUser] = useState(null);
-  const [authScreen, setAuthScreen] = useState("login"); // login | register
   const saveTimer = useRef(null);
   const skipNextSave = useRef(true);
 
@@ -811,13 +815,7 @@ function App() {
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-[#0B1220]">
-        {authScreen === "login"
-          ? <LoginScreen users={raw.users} onLogin={loginSession} onGoRegister={() => setAuthScreen("register")} />
-          : <RegisterScreen users={raw.users} onGoLogin={() => setAuthScreen("login")} onRegister={(f) => {
-              const u = { id: uid(), username: f.username, password: f.password, fullName: f.fullName, role: "user" };
-              setRaw(r => ({ ...r, users: [...r.users, u] }));
-              loginSession(u);
-            }} />}
+        <LoginScreen users={raw.users} onLogin={loginSession} />
       </div>
     );
   }
@@ -901,6 +899,7 @@ function App() {
               <div className="text-xs text-slate-400 truncate">{currentUser.fullName}</div>
               <button onClick={logout} className="text-slate-500 hover:text-rose-300" title={t("btn_logout")}>{Ic("logout", { size: 15 })}</button>
             </div>
+            <div className="text-[10px] text-slate-700 text-center pt-1">{t("footer_credit")}</div>
           </div>
         </aside>
 
@@ -940,6 +939,7 @@ function App() {
             {tab === "reports" && <ReportsPage data={data} journal={journal} currency={currency} company={raw.company} />}
             {tab === "users" && <UsersPage users={raw.users} currentUser={currentUser} onAdd={() => setModal({ type: "user" })} onDelete={removeUser} />}
             {tab === "settings" && <SettingsPanel company={raw.company} onSave={saveCompany} onResetClick={() => setConfirmReset(true)} />}
+            <div className="no-print text-center text-[10px] text-slate-700 pt-10 pb-2 md:hidden">{t("footer_credit")}</div>
           </div>
         </main>
       </div>
@@ -1224,7 +1224,7 @@ function TransactionsPage({ transactions, accounts, currency, onAdd, onDelete })
               <div className="mt-3 border-t border-white/5 pt-3 space-y-1.5">
                 {tx.lines.map((l, i) => (
                   <div key={i} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-400">{accName(l.accountId)}</span>
+                    <span className="text-slate-400">{accName(l.accountId)}{l.desc && <span className="text-slate-600"> — {l.desc}</span>}</span>
                     <span className="tabular text-slate-300">
                       {Number(l.debit) > 0 && <span className="text-emerald-300">{t("tx_debit")} {fmt(l.debit * rate)}</span>}
                       {Number(l.credit) > 0 && <span className="text-rose-300">{t("tx_credit")} {fmt(l.credit * rate)}</span>}
@@ -1248,7 +1248,7 @@ function TransactionForm({ accounts, currency, onClose, onSubmit }) {
   const [date, setDate] = useState(today());
   const [txCurrency, setTxCurrency] = useState("local");
   const [exchangeRate, setExchangeRate] = useState("");
-  const [lines, setLines] = useState([{ accountId: accounts[0]?.id || "", debit: "", credit: "" }, { accountId: accounts[1]?.id || "", debit: "", credit: "" }]);
+  const [lines, setLines] = useState([{ accountId: accounts[0]?.id || "", desc: "", debit: "", credit: "" }, { accountId: accounts[1]?.id || "", desc: "", debit: "", credit: "" }]);
   const debitTotal = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
   const creditTotal = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
   const balanced = debitTotal > 0 && debitTotal === creditTotal;
@@ -1256,7 +1256,7 @@ function TransactionForm({ accounts, currency, onClose, onSubmit }) {
   const rateValid = !isUsd || Number(exchangeRate) > 0;
   const valid = memo.trim() && balanced && rateValid;
   function updateLine(i, patch) { setLines(ls => ls.map((l, idx) => idx === i ? { ...l, ...patch } : l)); }
-  function addLine() { setLines(ls => [...ls, { accountId: accounts[0]?.id || "", debit: "", credit: "" }]); }
+  function addLine() { setLines(ls => [...ls, { accountId: accounts[0]?.id || "", desc: "", debit: "", credit: "" }]); }
   function removeLine(i) { setLines(ls => ls.filter((_, idx) => idx !== i)); }
   return (
     <Modal title={t("tx_new_title")} onClose={onClose} wide>
@@ -1280,11 +1280,15 @@ function TransactionForm({ accounts, currency, onClose, onSubmit }) {
         </div>
         <div className="space-y-2">
           <div className="text-sm text-slate-400">{t("tx_lines")} {isUsd && `(${t("tx_currency_usd")})`}</div>
+          <div className="grid grid-cols-[1fr_1fr_100px_100px_32px] gap-2 text-xs text-slate-500 px-1">
+            <span>{t("common_account")}</span><span>{t("tx_lineDesc")}</span><span>{t("tx_debit")}</span><span>{t("tx_credit")}</span><span></span>
+          </div>
           {lines.map((l, i) => (
-            <div key={i} className="grid grid-cols-[1fr_110px_110px_32px] gap-2 items-center">
+            <div key={i} className="grid grid-cols-[1fr_1fr_100px_100px_32px] gap-2 items-center">
               <select className={inputCls} value={l.accountId} onChange={e => updateLine(i, { accountId: e.target.value })}>
                 {accounts.map(a => <option key={a.id} value={a.id}>{a.code} · {accName(a)}</option>)}
               </select>
+              <input className={inputCls} value={l.desc} onChange={e => updateLine(i, { desc: e.target.value })} placeholder={t("tx_lineDesc")} />
               <input type="number" min={0} placeholder={t("tx_debit")} className={inputCls} value={l.debit} onChange={e => updateLine(i, { debit: e.target.value, credit: e.target.value ? "" : l.credit })} />
               <input type="number" min={0} placeholder={t("tx_credit")} className={inputCls} value={l.credit} onChange={e => updateLine(i, { credit: e.target.value, debit: e.target.value ? "" : l.debit })} />
               <button type="button" onClick={() => removeLine(i)} className="text-slate-600 hover:text-rose-400 justify-self-center">{Ic("trash", { size: 15 })}</button>
@@ -1470,6 +1474,17 @@ function InvoicePrintModal({ invoice, kind, company, currency, partner, bank, on
         <div className="mt-6 flex items-center justify-between text-sm">
           <StatusPill status={invoice.status} />
           {bank && <div className="text-xs text-slate-500">{t("inv_paidVia")}: {bank.bankName} · {bank.accountNumber}</div>}
+        </div>
+
+        <div className="mt-10 grid grid-cols-2 gap-8">
+          <div className="text-center">
+            <div className="h-12"></div>
+            <div className="border-t border-slate-400 pt-2 text-xs text-slate-600">{t("inv_managerSign")}</div>
+          </div>
+          <div className="text-center">
+            <div className="h-12"></div>
+            <div className="border-t border-slate-400 pt-2 text-xs text-slate-600">{t("inv_accountantSign")}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -2116,9 +2131,9 @@ function JournalLedger({ journal, currency, company }) {
             <table className="w-full text-xs"><tbody>
               {row.lines.map((l, i) => (
                 <tr key={i}>
-                  <td className="py-1 text-slate-400 w-1/2">{l.accountName}</td>
-                  <td className="py-1 text-left tabular w-1/4">{l.debit ? fmt(l.debit) + " " + t("tx_debit") : ""}</td>
-                  <td className="py-1 text-left tabular w-1/4">{l.credit ? fmt(l.credit) + " " + t("tx_credit") : ""}</td>
+                  <td className="py-1 text-slate-400 w-1/3">{l.accountName}{l.desc && <span className="text-slate-600"> — {l.desc}</span>}</td>
+                  <td className="py-1 text-left tabular w-1/3">{l.debit ? fmt(l.debit) + " " + t("tx_debit") : ""}</td>
+                  <td className="py-1 text-left tabular w-1/3">{l.credit ? fmt(l.credit) + " " + t("tx_credit") : ""}</td>
                 </tr>
               ))}
             </tbody></table>
