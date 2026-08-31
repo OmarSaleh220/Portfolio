@@ -785,19 +785,16 @@ function App() {
   const skipNextSave = useRef(true);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/data");
-        if (!res.ok) throw new Error("bad response");
-        const parsed = normalize(await res.json());
-        skipNextSave.current = true;
-        setRaw(parsed);
-        setSyncState("synced");
-      } catch (err) {
-        setSyncState("offline");
-        setRaw(emptyData());
-      }
-    })();
+    try {
+      const s = localStorage.getItem("erp-data-v10");
+      const parsed = normalize(s ? JSON.parse(s) : emptyData());
+      skipNextSave.current = true;
+      setRaw(parsed);
+      setSyncState("synced");
+    } catch (err) {
+      setSyncState("offline");
+      setRaw(emptyData());
+    }
   }, []);
 
   useEffect(() => {
@@ -805,13 +802,12 @@ function App() {
     if (skipNextSave.current) { skipNextSave.current = false; return; }
     setSyncState("saving");
     clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
+    saveTimer.current = setTimeout(() => {
       try {
-        const res = await fetch("/api/data", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(raw) });
-        if (!res.ok) throw new Error("save failed");
+        localStorage.setItem("erp-data-v10", JSON.stringify(raw));
         setSyncState("synced");
       } catch { setSyncState("offline"); }
-    }, 500);
+    }, 300);
   }, [raw]);
 
   // session restore
