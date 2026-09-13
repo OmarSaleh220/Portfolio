@@ -10,12 +10,46 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Cairo:wght@600;800&family=Inter:wght@400;600;800&display=swap');
-  body { background:#0B1220; }
+
+  :root {
+    --bg-app: #0B1220;
+    --bg-panel: #111B2E;
+    --bg-panel2: #0D1524;
+    --bg-panel2-a: rgba(13,21,36,0.6);
+    --bg-panel3: #131B2E;
+    --bg-input: #0F1729;
+    --border-app: rgba(255,255,255,0.05);
+    --border-app2: rgba(255,255,255,0.10);
+    --overlay-1: rgba(255,255,255,0.05);
+    --overlay-2: rgba(255,255,255,0.10);
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --scrollbar: #223049;
+  }
+  :root[data-theme="light"] {
+    --bg-app: #F1F5F9;
+    --bg-panel: #FFFFFF;
+    --bg-panel2: #FFFFFF;
+    --bg-panel2-a: rgba(255,255,255,0.75);
+    --bg-panel3: #FFFFFF;
+    --bg-input: #F1F5F9;
+    --border-app: rgba(15,23,42,0.08);
+    --border-app2: rgba(15,23,42,0.14);
+    --overlay-1: rgba(15,23,42,0.04);
+    --overlay-2: rgba(15,23,42,0.08);
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --scrollbar: #CBD5E1;
+  }
+
+  body { background: var(--bg-app); transition: background-color 0.2s ease; }
   .font-ar { font-family: 'Tajawal','Cairo','Segoe UI',Tahoma,Arial,sans-serif; }
   .font-en { font-family: 'Inter','Segoe UI',Arial,sans-serif; }
   .tabular { font-variant-numeric: tabular-nums; font-family: 'Cairo','Inter',sans-serif; }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-thumb { background: #223049; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; }
 
   @media print {
     body { background: #fff !important; }
@@ -114,6 +148,14 @@ const STRINGS = {
   acc_subtitle: ["الأصول، الخصوم، حقوق الملكية، الإيرادات والمصروفات", "Assets, Liabilities, Equity, Revenue and Expenses"],
   acc_hint: ["البنود القابلة للتعديل دوس عليها لتدخل الرصيد الافتتاحي. باقي البنود تلقائية من الفواتير والمعاملات.", "Editable items can be clicked to set the opening balance. Other items are computed automatically from invoices & transactions."],
   acc_auto: ["تلقائي", "Auto"],
+  acc_new: ["إضافة حساب", "Add Account"],
+  acc_newTitle: ["إضافة حساب جديد", "Add New Account"],
+  acc_editTitle: ["تعديل الحساب", "Edit Account"],
+  acc_parent: ["تحت أي قسم", "Under Which Section"],
+  acc_code: ["رقم الحساب", "Account Code"],
+  acc_nameAr: ["اسم الحساب (عربي)", "Account Name (Arabic)"],
+  acc_nameEn: ["اسم الحساب (إنجليزي) — اختياري", "Account Name (English) — optional"],
+  acc_editableToggle: ["السماح بإدخال رصيد افتتاحي يدوي", "Allow a manual opening balance"],
 
   tx_title: ["المعاملات المالية", "Financial Transactions"],
   tx_subtitle: ["قيود يدوية تنعكس فورًا على شجرة الحسابات وكل القوائم المالية", "Manual journal entries that instantly reflect on accounts and reports"],
@@ -342,6 +384,8 @@ const STRINGS = {
     "This will permanently delete all accounts, invoices, transactions, customers, suppliers, employees and banks. The company name will be kept. Are you sure?"],
   reset_confirm: ["نعم، امسح كل شيء", "Yes, erase everything"],
   footer_credit: ["تم الإنشاء بواسطة Omar Saleh", "Created by Omar Saleh"],
+  theme_light: ["الوضع الفاتح", "Light Mode"],
+  theme_dark: ["الوضع الداكن", "Dark Mode"],
 };
 
 const LangContext = createContext({ lang: "ar", t: (k) => k });
@@ -390,6 +434,8 @@ const ICONS = {
   calendar: "M8 2v4 M16 2v4 M3 10h18 M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
   cash: "M2 7h20v10H2z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z M6 7v10 M18 7v10",
   user: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  sun: "M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z M12 1v2 M12 21v2 M4.22 4.22l1.42 1.42 M18.36 18.36l1.42 1.42 M1 12h2 M21 12h2 M4.22 19.78l1.42-1.42 M18.36 5.64l1.42-1.42",
+  moon: "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z",
 };
 const Ic = (name, props) => <Icon path={ICONS[name]} {...props} />;
 
@@ -597,17 +643,17 @@ function StatusPill({ status }) {
   );
 }
 function Field({ label, children }) {
-  return <label className="flex flex-col gap-1.5 text-sm"><span className="text-slate-400">{label}</span>{children}</label>;
+  return <label className="flex flex-col gap-1.5 text-sm"><span className="text-[var(--text-secondary)]">{label}</span>{children}</label>;
 }
-const inputCls = "bg-[#0F1729] border border-white/10 rounded-lg px-3 py-2 text-slate-100 text-sm outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 placeholder:text-slate-600 w-full";
+const inputCls = "bg-[var(--bg-input)] border border-[var(--border-app2)] rounded-lg px-3 py-2 text-[var(--text-primary)] text-sm outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 placeholder:text-[var(--text-muted)] w-full";
 
 function Modal({ title, onClose, children, hideClose, wide }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={hideClose ? undefined : onClose}>
-      <div className={`w-full ${wide ? "max-w-2xl" : "max-w-lg"} rounded-2xl border border-white/10 bg-[#131B2E] shadow-2xl shadow-black/50 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sticky top-0 bg-[#131B2E]">
-          <h3 className="font-bold text-slate-100">{title}</h3>
-          {!hideClose && <button onClick={onClose} className="text-slate-500 hover:text-slate-200">{Ic("x", { size: 18 })}</button>}
+      <div className={`w-full ${wide ? "max-w-2xl" : "max-w-lg"} rounded-2xl border border-[var(--border-app2)] bg-[var(--bg-panel3)] shadow-2xl shadow-black/50 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-[var(--border-app2)] px-5 py-4 sticky top-0 bg-[var(--bg-panel3)]">
+          <h3 className="font-bold text-[var(--text-primary)]">{title}</h3>
+          {!hideClose && <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">{Ic("x", { size: 18 })}</button>}
         </div>
         <div className="p-5">{children}</div>
       </div>
@@ -618,7 +664,7 @@ function PrimaryBtn({ children, ...props }) {
   return <button {...props} className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-400 text-[#07101E] text-sm font-bold px-4 py-2 hover:bg-cyan-300 transition-colors disabled:opacity-40">{children}</button>;
 }
 function GhostBtn({ children, ...props }) {
-  return <button {...props} className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 text-slate-300 text-sm font-bold px-4 py-2 hover:bg-white/10 transition-colors">{children}</button>;
+  return <button {...props} className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--overlay-1)] text-[var(--text-secondary)] text-sm font-bold px-4 py-2 hover:bg-[var(--overlay-2)] transition-colors">{children}</button>;
 }
 function DangerBtn({ children, ...props }) {
   return <button {...props} className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/10 text-rose-300 ring-1 ring-rose-500/30 text-sm font-bold px-4 py-2 hover:bg-rose-500/20 transition-colors">{children}</button>;
@@ -626,7 +672,7 @@ function DangerBtn({ children, ...props }) {
 function PrintBtn({ onClick, full }) {
   const t = useT();
   return (
-    <button onClick={onClick} className="no-print inline-flex items-center gap-1.5 rounded-lg bg-white/5 text-slate-300 text-sm font-bold px-4 py-2 hover:bg-white/10 transition-colors ring-1 ring-white/10">
+    <button onClick={onClick} className="no-print inline-flex items-center gap-1.5 rounded-lg bg-[var(--overlay-1)] text-[var(--text-secondary)] text-sm font-bold px-4 py-2 hover:bg-[var(--overlay-2)] transition-colors ring-1 ring-white/10">
       {Ic("printer", { size: 15 })} {full ? t("btn_printReport") : t("btn_print")}
     </button>
   );
@@ -653,7 +699,7 @@ function CompanySetupModal({ onSave }) {
   const valid = f.name.trim().length > 0;
   return (
     <Modal title={t("auth_companyTitle")} hideClose>
-      <p className="text-sm text-slate-400 mb-4 -mt-1">{t("auth_companyBody")}</p>
+      <p className="text-sm text-[var(--text-secondary)] mb-4 -mt-1">{t("auth_companyBody")}</p>
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (valid) onSave(f); }}>
         <Field label={t("auth_companyName")}><input autoFocus className={inputCls} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></Field>
         <Field label={t("set_activity")}><input className={inputCls} value={f.activity} onChange={e => setF({ ...f, activity: e.target.value })} /></Field>
@@ -673,10 +719,10 @@ function AuthCard({ children }) {
   const t = useT();
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#131B2E] p-7 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border border-[var(--border-app2)] bg-[var(--bg-panel3)] p-7 shadow-2xl">
         {children}
       </div>
-      <div className="text-[11px] text-slate-600 mt-6">{t("footer_credit")}</div>
+      <div className="text-[11px] text-[var(--text-muted)] mt-6">{t("footer_credit")}</div>
     </div>
   );
 }
@@ -688,8 +734,8 @@ function FirstAdminScreen({ companyName, onCreate }) {
   return (
     <AuthCard>
       <CompanyLogo name={companyName} size={44} className="mx-auto mb-4" />
-      <div className="flex items-center gap-2 mb-1 text-cyan-300 justify-center">{Ic("lock", { size: 20 })}<span className="font-black text-lg text-slate-50">{t("auth_adminTitle")}</span></div>
-      <p className="text-sm text-slate-400 mb-5 text-center">{t("auth_adminBody")}</p>
+      <div className="flex items-center gap-2 mb-1 text-cyan-300 justify-center">{Ic("lock", { size: 20 })}<span className="font-black text-lg text-[var(--text-primary)]">{t("auth_adminTitle")}</span></div>
+      <p className="text-sm text-[var(--text-secondary)] mb-5 text-center">{t("auth_adminBody")}</p>
       <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (valid) onCreate(f); }}>
         <Field label={t("users_fullName")}><input autoFocus className={inputCls} value={f.fullName} onChange={e => setF({ ...f, fullName: e.target.value })} /></Field>
         <Field label={t("users_username")}><input className={inputCls} value={f.username} onChange={e => setF({ ...f, username: e.target.value })} /></Field>
@@ -712,8 +758,8 @@ function LoginScreen({ companyName, users, onLogin }) {
   return (
     <AuthCard>
       <CompanyLogo name={companyName} size={44} className="mx-auto mb-4" />
-      <div className="flex items-center gap-2 mb-1 text-cyan-300 justify-center">{Ic("lock", { size: 20 })}<span className="font-black text-lg text-slate-50">{t("auth_loginTitle")}</span></div>
-      <p className="text-sm text-slate-400 mb-5 text-center">{t("auth_loginSubtitle")}</p>
+      <div className="flex items-center gap-2 mb-1 text-cyan-300 justify-center">{Ic("lock", { size: 20 })}<span className="font-black text-lg text-[var(--text-primary)]">{t("auth_loginTitle")}</span></div>
+      <p className="text-sm text-[var(--text-secondary)] mb-5 text-center">{t("auth_loginSubtitle")}</p>
       <form className="space-y-4" onSubmit={submit}>
         <Field label={t("users_username")}><input autoFocus className={inputCls} value={f.username} onChange={e => { setF({ ...f, username: e.target.value }); setErr(false); }} /></Field>
         <Field label={t("users_password")}><input type="password" className={inputCls} value={f.password} onChange={e => { setF({ ...f, password: e.target.value }); setErr(false); }} /></Field>
@@ -736,7 +782,7 @@ function RegisterScreen({ users, onRegister, onGoLogin }) {
   }
   return (
     <AuthCard>
-      <div className="flex items-center gap-2 mb-1 text-cyan-300">{Ic("user", { size: 20 })}<span className="font-black text-lg text-slate-50">{t("auth_registerTitle")}</span></div>
+      <div className="flex items-center gap-2 mb-1 text-cyan-300">{Ic("user", { size: 20 })}<span className="font-black text-lg text-[var(--text-primary)]">{t("auth_registerTitle")}</span></div>
       <form className="space-y-4 mt-5" onSubmit={submit}>
         <Field label={t("users_fullName")}><input autoFocus className={inputCls} value={f.fullName} onChange={e => setF({ ...f, fullName: e.target.value })} /></Field>
         <Field label={t("users_username")}><input className={inputCls} value={f.username} onChange={e => { setF({ ...f, username: e.target.value }); setErr(false); }} /></Field>
@@ -744,7 +790,7 @@ function RegisterScreen({ users, onRegister, onGoLogin }) {
         {err && <div className="text-rose-300 text-sm">{t("auth_usernameTaken")}</div>}
         <PrimaryBtn type="submit" disabled={!valid} className="w-full justify-center">{t("btn_register")}</PrimaryBtn>
       </form>
-      <div className="text-center text-sm text-slate-500 mt-4">{t("auth_haveAccount")} <button onClick={onGoLogin} className="text-cyan-300 font-bold hover:underline">{t("auth_loginLink")}</button></div>
+      <div className="text-center text-sm text-[var(--text-muted)] mt-4">{t("auth_haveAccount")} <button onClick={onGoLogin} className="text-cyan-300 font-bold hover:underline">{t("auth_loginLink")}</button></div>
     </AuthCard>
   );
 }
@@ -752,10 +798,15 @@ function RegisterScreen({ users, onRegister, onGoLogin }) {
 /* ================= root app ================= */
 function Root() {
   const [lang, setLang] = useState(() => localStorage.getItem("erp-lang") || "ar");
+  const [theme, setTheme] = useState(() => localStorage.getItem("erp-theme") || "dark");
   useEffect(() => { localStorage.setItem("erp-lang", lang); }, [lang]);
+  useEffect(() => {
+    localStorage.setItem("erp-theme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
   const t = (key) => (STRINGS[key] ? STRINGS[key][lang === "en" ? 1 : 0] : key);
   return (
-    <LangContext.Provider value={{ lang, setLang, t }}>
+    <LangContext.Provider value={{ lang, setLang, theme, setTheme, t }}>
       <div dir={lang === "ar" ? "rtl" : "ltr"} className={lang === "ar" ? "font-ar" : "font-en"}>
         <App />
       </div>
@@ -763,10 +814,20 @@ function Root() {
   );
 }
 
+function ThemeToggle() {
+  const { theme, setTheme } = useLang();
+  const t = useT();
+  return (
+    <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="no-print inline-flex items-center gap-1.5 rounded-lg bg-[var(--overlay-1)] text-[var(--text-secondary)] text-xs font-bold px-3 py-1.5 hover:bg-[var(--overlay-2)] transition-colors ring-1 ring-[var(--border-app2)]">
+      {Ic(theme === "dark" ? "sun" : "moon", { size: 13 })} {theme === "dark" ? t("theme_light") : t("theme_dark")}
+    </button>
+  );
+}
+
 function LangToggle() {
   const { lang, setLang } = useLang();
   return (
-    <button onClick={() => setLang(lang === "ar" ? "en" : "ar")} className="no-print inline-flex items-center gap-1.5 rounded-lg bg-white/5 text-slate-300 text-xs font-bold px-3 py-1.5 hover:bg-white/10 transition-colors ring-1 ring-white/10">
+    <button onClick={() => setLang(lang === "ar" ? "en" : "ar")} className="no-print inline-flex items-center gap-1.5 rounded-lg bg-[var(--overlay-1)] text-[var(--text-secondary)] text-xs font-bold px-3 py-1.5 hover:bg-[var(--overlay-2)] transition-colors ring-1 ring-white/10">
       {Ic("globe", { size: 13 })} {lang === "ar" ? "English" : "العربية"}
     </button>
   );
@@ -833,11 +894,11 @@ function App() {
   function flash(msg) { setToast(msg); setTimeout(() => setToast(""), 2200); }
 
   if (!raw || !data) {
-    return <div className="min-h-screen bg-[#0B1220] flex items-center justify-center text-slate-500">…</div>;
+    return <div className="min-h-screen bg-[var(--bg-app)] flex items-center justify-center text-[var(--text-muted)]">…</div>;
   }
 
   if (!raw.company) {
-    return <div className="min-h-screen bg-[#0B1220]"><CompanySetupModal onSave={(company) => { setRaw(r => ({ ...r, company })); }} /></div>;
+    return <div className="min-h-screen bg-[var(--bg-app)]"><CompanySetupModal onSave={(company) => { setRaw(r => ({ ...r, company })); }} /></div>;
   }
 
   function loginSession(u) { setCurrentUser(u); localStorage.setItem("erp-session", JSON.stringify({ username: u.username })); }
@@ -845,7 +906,7 @@ function App() {
 
   if (raw.users.length === 0) {
     return (
-      <div className="min-h-screen bg-[#0B1220]">
+      <div className="min-h-screen bg-[var(--bg-app)]">
         <FirstAdminScreen companyName={raw.company.name} onCreate={(f) => {
           const u = { id: uid(), username: f.username, password: f.password, fullName: f.fullName, role: "admin" };
           setRaw(r => ({ ...r, users: [u] }));
@@ -857,7 +918,7 @@ function App() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-[#0B1220]">
+      <div className="min-h-screen bg-[var(--bg-app)]">
         <LoginScreen companyName={raw.company.name} users={raw.users} onLogin={loginSession} />
       </div>
     );
@@ -900,6 +961,9 @@ function App() {
   function removeItem(kind, id) { setRaw(r => ({ ...r, [kind]: r[kind].filter(x => x.id !== id) })); }
   function toggleStatus(kind, id) { setRaw(r => ({ ...r, [kind]: r[kind].map(x => x.id === id ? { ...x, status: x.status === "مدفوعة" ? "غير مدفوعة" : "مدفوعة" } : x) })); }
   function setOpeningBalance(id, value) { setRaw(r => ({ ...r, accounts: r.accounts.map(a => a.id === id ? { ...a, balance: Number(value) || 0 } : a) })); }
+  function addAccount(f) { setRaw(r => ({ ...r, accounts: [...r.accounts, { id: uid(), balance: 0, ...f }] })); flash("✓"); }
+  function editAccount(id, f) { setRaw(r => ({ ...r, accounts: r.accounts.map(a => a.id === id ? { ...a, code: f.code, name: f.name, nameEn: f.nameEn, editable: f.editable } : a) })); flash("✓"); }
+  function deleteAccount(id) { setRaw(r => ({ ...r, accounts: r.accounts.filter(a => a.id !== id) })); }
   function setBankBalance(id, value) { setRaw(r => ({ ...r, banks: r.banks.map(b => b.id === id ? { ...b, balance: Number(value) || 0 } : b) })); }
   function saveCompany(company) { setRaw(r => ({ ...r, company })); flash("✓"); }
   function addTransaction(tx) { setRaw(r => ({ ...r, transactions: [{ id: uid(), ...tx }, ...(r.transactions || [])] })); flash("✓"); }
@@ -915,15 +979,15 @@ function App() {
   const visibleNav = NAV.filter(n => !n.adminOnly || isAdmin);
 
   return (
-    <div className="min-h-screen bg-[#0B1220] text-slate-200">
+    <div className="min-h-screen bg-[var(--bg-app)] text-[var(--text-primary)]">
       <div className="flex">
-        <aside className="no-print hidden md:flex w-64 shrink-0 flex-col border-l border-white/5 rtl:border-l rtl:border-r-0 bg-[#0D1524] min-h-screen sticky top-0">
-          <div className="px-5 py-6 border-b border-white/5">
+        <aside className="no-print hidden md:flex w-64 shrink-0 flex-col border-l border-[var(--border-app)] rtl:border-l rtl:border-r-0 bg-[var(--bg-panel2)] min-h-screen sticky top-0">
+          <div className="px-5 py-6 border-b border-[var(--border-app)]">
             <div className="flex items-center gap-2.5">
               <CompanyLogo name={raw.company.name} size={38} />
               <div className="min-w-0">
-                <div className="font-black text-slate-50 leading-tight truncate">{raw.company.name}</div>
-                <div className="text-[11px] text-slate-500 truncate">{raw.company.activity}</div>
+                <div className="font-black text-[var(--text-primary)] leading-tight truncate">{raw.company.name}</div>
+                <div className="text-[11px] text-[var(--text-muted)] truncate">{raw.company.activity}</div>
               </div>
             </div>
           </div>
@@ -931,27 +995,30 @@ function App() {
             {visibleNav.map(n => {
               const active = tab === n.key;
               return (
-                <button key={n.key} onClick={() => setTab(n.key)} className={`w-full flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-bold transition-colors ${active ? "bg-cyan-400/10 text-cyan-300 ring-1 ring-cyan-400/30" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"}`}>
+                <button key={n.key} onClick={() => setTab(n.key)} className={`w-full flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-bold transition-colors ${active ? "bg-cyan-400/10 text-cyan-300 ring-1 ring-cyan-400/30" : "text-[var(--text-secondary)] hover:bg-[var(--overlay-1)] hover:text-[var(--text-primary)]"}`}>
                   {Ic(n.icon, { size: 17 })} {t(n.label)}
                 </button>
               );
             })}
           </nav>
-          <div className="px-5 py-4 border-t border-white/5 space-y-3">
-            <LangToggle />
-            <div className="flex items-center justify-between">
-              <div className="text-xs text-slate-400 truncate">{currentUser.fullName}</div>
-              <button onClick={logout} className="text-slate-500 hover:text-rose-300" title={t("btn_logout")}>{Ic("logout", { size: 15 })}</button>
+          <div className="px-5 py-4 border-t border-[var(--border-app)] space-y-3">
+            <div className="flex gap-2">
+              <LangToggle />
+              <ThemeToggle />
             </div>
-            <div className="text-[10px] text-slate-700 text-center pt-1">{t("footer_credit")}</div>
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-[var(--text-secondary)] truncate">{currentUser.fullName}</div>
+              <button onClick={logout} className="text-[var(--text-muted)] hover:text-rose-300" title={t("btn_logout")}>{Ic("logout", { size: 15 })}</button>
+            </div>
+            <div className="text-[10px] text-[var(--text-muted)] text-center pt-1">{t("footer_credit")}</div>
           </div>
         </aside>
 
-        <div className="no-print md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0D1524] border-t border-white/10 flex overflow-x-auto">
+        <div className="no-print md:hidden fixed bottom-0 inset-x-0 z-40 bg-[var(--bg-panel2)] border-t border-[var(--border-app2)] flex overflow-x-auto">
           {visibleNav.map(n => {
             const active = tab === n.key;
             return (
-              <button key={n.key} onClick={() => setTab(n.key)} className={`flex-1 min-w-[76px] flex flex-col items-center gap-1 py-2.5 text-[10px] font-bold ${active ? "text-cyan-300" : "text-slate-500"}`}>
+              <button key={n.key} onClick={() => setTab(n.key)} className={`flex-1 min-w-[76px] flex flex-col items-center gap-1 py-2.5 text-[10px] font-bold ${active ? "text-cyan-300" : "text-[var(--text-muted)]"}`}>
                 {Ic(n.icon, { size: 17 })} {t(n.label)}
               </button>
             );
@@ -959,7 +1026,7 @@ function App() {
         </div>
 
         <main className="flex-1 min-w-0 pb-24 md:pb-8 print-area">
-          <div className="no-print border-b border-white/5 bg-[#0D1524]/60 px-5 md:px-8 py-3 flex flex-wrap items-center gap-x-8 gap-y-1 text-[12px] tabular">
+          <div className="no-print border-b border-[var(--border-app)] bg-[var(--bg-panel2-a)] px-5 md:px-8 py-3 flex flex-wrap items-center gap-x-8 gap-y-1 text-[12px] tabular">
             <StripStat label={t("strip_cash")} value={totals.cash} color="text-cyan-300" currency={currency} />
             <StripStat label={t("strip_receivable")} value={totals.receivable} color="text-amber-300" currency={currency} />
             <StripStat label={t("strip_payable")} value={totals.payable} color="text-rose-300" currency={currency} />
@@ -969,8 +1036,8 @@ function App() {
 
           <div className="px-5 md:px-8 py-6">
             {tab === "dashboard" && <Dashboard data={data} totals={totals} currency={currency} company={raw.company} products={products} />}
-            {tab === "accounts" && <AccountsTree accounts={data.accounts} currency={currency} onEdit={setOpeningBalance} isAdmin={isAdmin} />}
-            {tab === "transactions" && <TransactionsPage transactions={raw.transactions || []} accounts={postableAccounts} currency={currency} onAdd={() => setModal({ type: "transaction" })} onEdit={(tx) => setModal({ type: "transaction", editing: tx })} onDelete={removeTransaction} />}
+            {tab === "accounts" && <AccountsTree accounts={data.accounts} currency={currency} onEdit={setOpeningBalance} onAddAccount={addAccount} onEditAccount={editAccount} onDeleteAccount={deleteAccount} isAdmin={isAdmin} />}
+            {tab === "transactions" && <TransactionsPage transactions={raw.transactions || []} accounts={postableAccounts} banks={raw.banks} currency={currency} onAdd={() => setModal({ type: "transaction" })} onEdit={(tx) => setModal({ type: "transaction", editing: tx })} onDelete={removeTransaction} />}
             {tab === "sales" && <InvoiceTable kind="sale" rows={data.salesInvoices} who={data.customers} whoKey="customerId" currency={currency} onAdd={() => setModal({ type: "sale" })} onDelete={id => removeItem("salesInvoices", id)} onToggle={id => toggleStatus("salesInvoices", id)} onPrint={(inv) => setModal({ type: "printInvoice", kind: "sale", invoice: inv })} banks={raw.banks} />}
             {tab === "purchases" && <InvoiceTable kind="purchase" rows={data.purchaseInvoices} who={data.suppliers} whoKey="supplierId" currency={currency} onAdd={() => setModal({ type: "purchase" })} onDelete={id => removeItem("purchaseInvoices", id)} onToggle={id => toggleStatus("purchaseInvoices", id)} onPrint={(inv) => setModal({ type: "printInvoice", kind: "purchase", invoice: inv })} banks={raw.banks} accounts={data.accounts} />}
             {tab === "inventory" && <InventoryPage products={products} currency={currency} isAdmin={isAdmin} onAdd={() => setModal({ type: "product" })} onDelete={id => removeItem("products", id)} onEdit={setProductStock} />}
@@ -983,7 +1050,7 @@ function App() {
             {tab === "reports" && <ReportsPage data={data} rawAccounts={raw.accounts} journal={journal} currency={currency} company={raw.company} />}
             {tab === "users" && <UsersPage users={raw.users} currentUser={currentUser} onAdd={() => setModal({ type: "user" })} onDelete={removeUser} />}
             {tab === "settings" && <SettingsPanel company={raw.company} onSave={saveCompany} onResetClick={() => setConfirmReset(true)} />}
-            <div className="no-print text-center text-[10px] text-slate-700 pt-10 pb-2 md:hidden">{t("footer_credit")}</div>
+            <div className="no-print text-center text-[10px] text-[var(--text-muted)] pt-10 pb-2 md:hidden">{t("footer_credit")}</div>
           </div>
         </main>
       </div>
@@ -1005,7 +1072,7 @@ function App() {
       {modal?.type === "product" && <ProductForm onClose={() => setModal(null)} onSubmit={f => { addProduct(f); setModal(null); }} />}
       {modal?.type === "transaction" && (
         <TransactionForm
-          accounts={postableAccounts} currency={currency} existing={modal.editing}
+          accounts={postableAccounts} banks={raw.banks} currency={currency} existing={modal.editing}
           onClose={() => setModal(null)}
           onSubmit={tx => { modal.editing ? updateTransaction({ ...tx, id: modal.editing.id }) : addTransaction(tx); setModal(null); }}
         />
@@ -1022,7 +1089,7 @@ function App() {
 
       {confirmReset && (
         <Modal title={t("reset_title")} onClose={() => setConfirmReset(false)}>
-          <div className="flex items-start gap-3 text-sm text-slate-300">
+          <div className="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
             <span className="text-rose-300 mt-0.5">{Ic("alert", { size: 20 })}</span>
             <p>{t("reset_body")}</p>
           </div>
@@ -1037,14 +1104,14 @@ function NeedPersonFirst({ kind, onClose, onGo }) {
   const t = useT();
   return (
     <Modal title={kind === "customer" ? t("inv_needPersonTitleCustomer") : t("inv_needPersonTitleSupplier")} onClose={onClose}>
-      <p className="text-sm text-slate-400 mb-4">{kind === "customer" ? t("inv_needPersonBodyCustomer") : t("inv_needPersonBodySupplier")}</p>
+      <p className="text-sm text-[var(--text-secondary)] mb-4">{kind === "customer" ? t("inv_needPersonBodyCustomer") : t("inv_needPersonBodySupplier")}</p>
       <div className="flex justify-end"><PrimaryBtn onClick={onGo}>{kind === "customer" ? t("inv_goToCustomers") : t("inv_goToSuppliers")}</PrimaryBtn></div>
     </Modal>
   );
 }
 
 function StripStat({ label, value, color, currency }) {
-  return <div className="flex items-baseline gap-1.5"><span className="text-slate-500">{label}</span><span className={`font-bold ${color}`}>{fmt(value)} {currency}</span></div>;
+  return <div className="flex items-baseline gap-1.5"><span className="text-[var(--text-muted)]">{label}</span><span className={`font-bold ${color}`}>{fmt(value)} {currency}</span></div>;
 }
 
 function SyncBadge({ state }) {
@@ -1056,13 +1123,13 @@ function SyncBadge({ state }) {
     offline: { text: t("sync_offline"), dot: "bg-rose-300" },
   };
   const s = map[state] || map.connecting;
-  return <div className="ms-auto flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${s.dot}`}></span><span className="text-slate-400">{s.text}</span></div>;
+  return <div className="ms-auto flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${s.dot}`}></span><span className="text-[var(--text-secondary)]">{s.text}</span></div>;
 }
 
 function MiniBarChart({ rows }) {
   const t = useT();
   const max = Math.max(1, ...rows.flatMap(r => [r.sales, r.purchases]));
-  if (rows.length === 0) return <div className="text-slate-600 text-sm py-10 text-center">{t("dash_noChart")}</div>;
+  if (rows.length === 0) return <div className="text-[var(--text-muted)] text-sm py-10 text-center">{t("dash_noChart")}</div>;
   return (
     <div className="flex items-end gap-4 h-56 pt-4">
       {rows.map(r => (
@@ -1071,7 +1138,7 @@ function MiniBarChart({ rows }) {
             <div className="w-4 rounded-t bg-cyan-400" style={{ height: `${(r.sales / max) * 100}%` }}></div>
             <div className="w-4 rounded-t bg-rose-400" style={{ height: `${(r.purchases / max) * 100}%` }}></div>
           </div>
-          <span className="text-[10px] text-slate-500 tabular">{r.month}</span>
+          <span className="text-[10px] text-[var(--text-muted)] tabular">{r.month}</span>
         </div>
       ))}
     </div>
@@ -1105,12 +1172,12 @@ function Dashboard({ data, totals, currency, company, products }) {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-black text-slate-50">{t("dash_title")}</h1>
-        <p className="text-slate-500 text-sm mt-1">{t("dash_subtitle")} {company?.name}</p>
+        <h1 className="text-2xl font-black text-[var(--text-primary)]">{t("dash_title")}</h1>
+        <p className="text-[var(--text-muted)] text-sm mt-1">{t("dash_subtitle")} {company?.name}</p>
       </div>
 
       {isEmpty && (
-        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-5 text-sm text-slate-300">
+        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-5 text-sm text-[var(--text-secondary)]">
           <div className="font-bold text-cyan-300 mb-1">{t("dash_emptyTitle")}</div>
           {t("dash_emptyBody")}
         </div>
@@ -1118,17 +1185,17 @@ function Dashboard({ data, totals, currency, company, products }) {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map(c => (
-          <div key={c.label} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+          <div key={c.label} className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] p-5">
             <span className={c.color}>{Ic(c.icon, { size: 20 })}</span>
-            <div className="mt-3 text-2xl font-black tabular text-slate-50">{c.value}</div>
-            <div className="text-xs text-slate-400 mt-1">{c.label}</div>
+            <div className="mt-3 text-2xl font-black tabular text-[var(--text-primary)]">{c.value}</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">{c.label}</div>
           </div>
         ))}
       </div>
-      <div className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+      <div className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] p-5">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="font-bold text-slate-200">{t("dash_chartTitle")}</h2>
-          <div className="flex items-center gap-4 text-xs text-slate-400">
+          <h2 className="font-bold text-[var(--text-primary)]">{t("dash_chartTitle")}</h2>
+          <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-400 inline-block"></span>{t("dash_sales")}</span>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block"></span>{t("dash_purchases")}</span>
           </div>
@@ -1137,26 +1204,26 @@ function Dashboard({ data, totals, currency, company, products }) {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
-          <h2 className="font-bold text-slate-200 mb-3">{t("dash_topCustomers")}</h2>
-          {topCustomers.length === 0 ? <div className="text-slate-600 text-sm">{t("dash_noData")}</div> : (
+        <div className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] p-5">
+          <h2 className="font-bold text-[var(--text-primary)] mb-3">{t("dash_topCustomers")}</h2>
+          {topCustomers.length === 0 ? <div className="text-[var(--text-muted)] text-sm">{t("dash_noData")}</div> : (
             <div className="space-y-2">
               {topCustomers.map(c => (
-                <div key={c.name} className="flex items-center justify-between text-sm border-b border-white/5 pb-2 last:border-0">
-                  <span className="text-slate-300">{c.name}</span>
+                <div key={c.name} className="flex items-center justify-between text-sm border-b border-[var(--border-app)] pb-2 last:border-0">
+                  <span className="text-[var(--text-secondary)]">{c.name}</span>
                   <span className="tabular font-bold text-cyan-300">{fmt(c.total)} {currency}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
-          <h2 className="font-bold text-slate-200 mb-3">{t("dash_lowStock")}</h2>
-          {lowStock.length === 0 ? <div className="text-slate-600 text-sm">{t("dash_noData")}</div> : (
+        <div className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] p-5">
+          <h2 className="font-bold text-[var(--text-primary)] mb-3">{t("dash_lowStock")}</h2>
+          {lowStock.length === 0 ? <div className="text-[var(--text-muted)] text-sm">{t("dash_noData")}</div> : (
             <div className="space-y-2">
               {lowStock.map(p => (
-                <div key={p.id} className="flex items-center justify-between text-sm border-b border-white/5 pb-2 last:border-0">
-                  <span className="text-slate-300">{p.name}</span>
+                <div key={p.id} className="flex items-center justify-between text-sm border-b border-[var(--border-app)] pb-2 last:border-0">
+                  <span className="text-[var(--text-secondary)]">{p.name}</span>
                   <span className="tabular font-bold text-rose-300">{fmt(p.stock)} {p.unit}</span>
                 </div>
               ))}
@@ -1177,55 +1244,65 @@ function EditableBalance({ value, onSave, currency }) {
   useEffect(() => setVal(value), [value]);
   if (!editing) {
     return (
-      <button onClick={() => setEditing(true)} className="no-print flex items-center gap-1.5 tabular font-bold text-slate-200 hover:text-cyan-300 group">
+      <button onClick={() => setEditing(true)} className="no-print flex items-center gap-1.5 tabular font-bold text-[var(--text-primary)] hover:text-cyan-300 group">
         {fmt(value)} {currency}
-        <span className="opacity-0 group-hover:opacity-100 text-slate-500">{Ic("pencil", { size: 12 })}</span>
+        <span className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)]">{Ic("pencil", { size: 12 })}</span>
       </button>
     );
   }
   return (
     <form className="flex items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); onSave(val); setEditing(false); }}>
-      <input autoFocus type="number" className="w-28 bg-[#0F1729] border border-cyan-400/50 rounded-md px-2 py-1 text-sm text-slate-100 tabular outline-none" value={val} onChange={e => setVal(e.target.value)} onBlur={() => { onSave(val); setEditing(false); }} />
-      <span className="text-xs text-slate-500">{currency}</span>
+      <input autoFocus type="number" className="w-28 bg-[var(--bg-input)] border border-cyan-400/50 rounded-md px-2 py-1 text-sm text-[var(--text-primary)] tabular outline-none" value={val} onChange={e => setVal(e.target.value)} onBlur={() => { onSave(val); setEditing(false); }} />
+      <span className="text-xs text-[var(--text-muted)]">{currency}</span>
     </form>
   );
 }
 
-function AccountsTree({ accounts, currency, onEdit, isAdmin }) {
+function AccountsTree({ accounts, currency, onEdit, onAddAccount, onEditAccount, onDeleteAccount, isAdmin }) {
   const t = useT(); const { lang } = useLang();
   const accName = (a) => lang === "en" ? (a.nameEn || a.name) : a.name;
   const roots = accounts.filter(a => a.type === "root");
   const [open, setOpen] = useState(() => Object.fromEntries(roots.map(r => [r.id, true])));
+  const [modal, setModal] = useState(null); // { mode: 'add'|'edit', account? }
   return (
     <div>
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
-        <div><h1 className="text-2xl font-black text-slate-50">{t("acc_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("acc_subtitle")}</p></div>
-        <div className="no-print text-xs text-slate-500 bg-white/5 rounded-lg px-3 py-2 max-w-xs">{t("acc_hint")}</div>
+        <div><h1 className="text-2xl font-black text-[var(--text-primary)]">{t("acc_title")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{t("acc_subtitle")}</p></div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="no-print text-xs text-[var(--text-muted)] bg-[var(--overlay-1)] rounded-lg px-3 py-2 max-w-xs">{t("acc_hint")}</div>
+          {isAdmin && <PrimaryBtn onClick={() => setModal({ mode: "add" })}>{Ic("plus", { size: 16 })} {t("acc_new")}</PrimaryBtn>}
+        </div>
       </div>
-      <div className="rounded-2xl border border-white/5 bg-[#111B2E] divide-y divide-white/5">
+      <div className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] divide-y divide-[var(--border-app)]">
         {roots.map(root => {
           const children = accounts.filter(a => a.parentId === root.id);
           const total = children.reduce((s, c) => s + (c.balance || 0), 0);
           return (
             <div key={root.id}>
-              <button onClick={() => setOpen(o => ({ ...o, [root.id]: !o[root.id] }))} className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
+              <button onClick={() => setOpen(o => ({ ...o, [root.id]: !o[root.id] }))} className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-[var(--overlay-1)] transition-colors">
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-500">{Ic(open[root.id] ? "chevDown" : "chevRight", { size: 16 })}</span>
-                  <span className="font-black text-slate-100">{root.code} · {accName(root)}</span>
+                  <span className="text-[var(--text-muted)]">{Ic(open[root.id] ? "chevDown" : "chevRight", { size: 16 })}</span>
+                  <span className="font-black text-[var(--text-primary)]">{root.code} · {accName(root)}</span>
                 </div>
-                <span className={`tabular font-bold ${TYPE_COLOR[children[0]?.type] || "text-slate-300"}`}>{fmt(total)} {currency}</span>
+                <span className={`tabular font-bold ${TYPE_COLOR[children[0]?.type] || "text-[var(--text-secondary)]"}`}>{fmt(total)} {currency}</span>
               </button>
               {open[root.id] && (
                 <div className="pb-2">
                   {children.map(c => (
-                    <div key={c.id} className="flex items-center justify-between px-5 py-2.5 pr-12 text-sm hover:bg-white/[0.02]">
+                    <div key={c.id} className="flex items-center justify-between px-5 py-2.5 pr-12 text-sm hover:bg-[var(--overlay-1)] group">
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-600 text-xs">{c.code}</span>
-                        <span className="text-slate-300">{accName(c)}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 ${TYPE_COLOR[c.type]}`}>{TYPE_LABEL[c.type][lang === "en" ? 1 : 0]}</span>
-                        {!c.editable && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-slate-500">{t("acc_auto")}</span>}
+                        <span className="text-[var(--text-muted)] text-xs">{c.code}</span>
+                        <span className="text-[var(--text-secondary)]">{accName(c)}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--overlay-1)] ${TYPE_COLOR[c.type]}`}>{TYPE_LABEL[c.type][lang === "en" ? 1 : 0]}</span>
+                        {!c.editable && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--overlay-1)] text-[var(--text-muted)]">{t("acc_auto")}</span>}
+                        {isAdmin && (
+                          <span className="no-print opacity-0 group-hover:opacity-100 flex items-center gap-1.5 transition-opacity">
+                            <button onClick={() => setModal({ mode: "edit", account: c })} className="text-[var(--text-muted)] hover:text-cyan-300">{Ic("pencil", { size: 12 })}</button>
+                            <button onClick={() => onDeleteAccount(c.id)} className="text-[var(--text-muted)] hover:text-rose-400">{Ic("trash", { size: 12 })}</button>
+                          </span>
+                        )}
                       </div>
-                      {c.editable && isAdmin ? <EditableBalance value={c.balance} currency={currency} onSave={(v) => onEdit(c.id, v)} /> : <span className="tabular font-bold text-slate-200">{fmt(c.balance)} {currency}</span>}
+                      {c.editable && isAdmin ? <EditableBalance value={c.balance} currency={currency} onSave={(v) => onEdit(c.id, v)} /> : <span className="tabular font-bold text-[var(--text-primary)]">{fmt(c.balance)} {currency}</span>}
                     </div>
                   ))}
                 </div>
@@ -1234,18 +1311,63 @@ function AccountsTree({ accounts, currency, onEdit, isAdmin }) {
           );
         })}
       </div>
+      {modal && (
+        <AccountForm
+          roots={roots} existing={modal.account}
+          onClose={() => setModal(null)}
+          onSubmit={(f) => { modal.mode === "add" ? onAddAccount(f) : onEditAccount(modal.account.id, f); setModal(null); }}
+        />
+      )}
     </div>
   );
 }
 
+function AccountForm({ roots, existing, onClose, onSubmit }) {
+  const t = useT();
+  const rootTypeMap = { a1: "asset", a2: "liability", a3: "equity", a4: "revenue", a5: "expense" };
+  const [f, setF] = useState({
+    parentId: existing?.parentId || roots[0]?.id || "a1",
+    code: existing?.code || "",
+    name: existing?.name || "",
+    nameEn: existing?.nameEn || "",
+    editable: existing ? !!existing.editable : true,
+  });
+  const valid = f.parentId && f.code.trim() && f.name.trim();
+  function submit(e) {
+    e.preventDefault();
+    if (!valid) return;
+    onSubmit({ code: f.code, name: f.name, nameEn: f.nameEn, editable: f.editable, parentId: f.parentId, type: rootTypeMap[f.parentId] || "asset" });
+  }
+  return (
+    <Modal title={existing ? t("acc_editTitle") : t("acc_newTitle")} onClose={onClose}>
+      <form className="space-y-4" onSubmit={submit}>
+        <Field label={t("acc_parent")}>
+          <select className={inputCls} value={f.parentId} onChange={e => setF({ ...f, parentId: e.target.value })} disabled={!!existing}>
+            {roots.map(r => <option key={r.id} value={r.id}>{r.code} · {r.name}</option>)}
+          </select>
+        </Field>
+        <Field label={t("acc_code")}><input className={inputCls} value={f.code} onChange={e => setF({ ...f, code: e.target.value })} placeholder="1-6" /></Field>
+        <Field label={t("acc_nameAr")}><input className={inputCls} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></Field>
+        <Field label={t("acc_nameEn")}><input className={inputCls} value={f.nameEn} onChange={e => setF({ ...f, nameEn: e.target.value })} /></Field>
+        <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+          <input type="checkbox" checked={f.editable} onChange={e => setF({ ...f, editable: e.target.checked })} />
+          {t("acc_editableToggle")}
+        </label>
+        <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
+      </form>
+    </Modal>
+  );
+}
+
 /* ================= transactions ================= */
-function TransactionsPage({ transactions, accounts, currency, onAdd, onEdit, onDelete }) {
+function TransactionsPage({ transactions, accounts, banks, currency, onAdd, onEdit, onDelete }) {
   const t = useT(); const { lang } = useLang();
   const accName = (id) => { const a = accounts.find(a => a.id === id); return a ? (lang === "en" ? (a.nameEn || a.name) : a.name) : "—"; };
+  const lineLabel = (l) => l.bankId ? `${accName(l.accountId)} (${(banks || []).find(b => b.id === l.bankId)?.bankName || "—"})` : accName(l.accountId);
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("swap", { size: 22 })}</span> {t("tx_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("tx_subtitle")}</p></div>
+        <div><h1 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-2"><span className="text-cyan-300">{Ic("swap", { size: 22 })}</span> {t("tx_title")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{t("tx_subtitle")}</p></div>
         <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("tx_new")}</PrimaryBtn>
       </div>
       <div className="space-y-3">
@@ -1254,29 +1376,29 @@ function TransactionsPage({ transactions, accounts, currency, onAdd, onEdit, onD
           const rate = isUsd ? (Number(tx.exchangeRate) || 1) : 1;
           const dTotal = tx.lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
           return (
-            <div key={tx.id} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+            <div key={tx.id} className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] p-5">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="font-bold text-slate-100 flex items-center gap-2">
+                  <div className="font-bold text-[var(--text-primary)] flex items-center gap-2">
                     {tx.memo}
                     {isUsd && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-400/10 text-cyan-300">USD @ {rate}</span>}
                   </div>
-                  <div className="text-xs text-slate-500 tabular mt-0.5">{tx.date}</div>
+                  <div className="text-xs text-[var(--text-muted)] tabular mt-0.5">{tx.date}</div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-left">
-                    {isUsd && <div className="tabular text-xs text-slate-500">${fmt(dTotal)}</div>}
+                    {isUsd && <div className="tabular text-xs text-[var(--text-muted)]">${fmt(dTotal)}</div>}
                     <span className="tabular font-bold text-cyan-300">{fmt(dTotal * rate)} {currency}</span>
                   </div>
-                  <button onClick={() => onEdit(tx)} className="text-slate-600 hover:text-cyan-300">{Ic("pencil", { size: 15 })}</button>
-                  <button onClick={() => onDelete(tx.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
+                  <button onClick={() => onEdit(tx)} className="text-[var(--text-muted)] hover:text-cyan-300">{Ic("pencil", { size: 15 })}</button>
+                  <button onClick={() => onDelete(tx.id)} className="text-[var(--text-muted)] hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
                 </div>
               </div>
-              <div className="mt-3 border-t border-white/5 pt-3 space-y-1.5">
+              <div className="mt-3 border-t border-[var(--border-app)] pt-3 space-y-1.5">
                 {tx.lines.map((l, i) => (
                   <div key={i} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-400">{accName(l.accountId)}{l.desc && <span className="text-slate-600"> — {l.desc}</span>}</span>
-                    <span className="tabular text-slate-300">
+                    <span className="text-[var(--text-secondary)]">{lineLabel(l)}{l.desc && <span className="text-[var(--text-muted)]"> — {l.desc}</span>}</span>
+                    <span className="tabular text-[var(--text-secondary)]">
                       {Number(l.debit) > 0 && <span className="text-emerald-300">{t("tx_debit")} {fmt(l.debit * rate)}</span>}
                       {Number(l.credit) > 0 && <span className="text-rose-300">{t("tx_credit")} {fmt(l.credit * rate)}</span>}
                     </span>
@@ -1286,13 +1408,13 @@ function TransactionsPage({ transactions, accounts, currency, onAdd, onEdit, onD
             </div>
           );
         })}
-        {transactions.length === 0 && <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-slate-600 text-sm">{t("tx_empty")}</div>}
+        {transactions.length === 0 && <div className="rounded-2xl border border-dashed border-[var(--border-app2)] p-10 text-center text-[var(--text-muted)] text-sm">{t("tx_empty")}</div>}
       </div>
     </div>
   );
 }
 
-function TransactionForm({ accounts, currency, existing, onClose, onSubmit }) {
+function TransactionForm({ accounts, banks, currency, existing, onClose, onSubmit }) {
   const t = useT(); const { lang } = useLang();
   const accName = (a) => lang === "en" ? (a.nameEn || a.name) : a.name;
   const [memo, setMemo] = useState(existing?.memo || "");
@@ -1301,7 +1423,7 @@ function TransactionForm({ accounts, currency, existing, onClose, onSubmit }) {
   const [exchangeRate, setExchangeRate] = useState(existing?.exchangeRate != null ? String(existing.exchangeRate) : "");
   const [lines, setLines] = useState(
     existing?.lines?.length
-      ? existing.lines.map(l => ({ accountId: l.accountId, desc: l.desc || "", debit: l.debit || "", credit: l.credit || "" }))
+      ? existing.lines.map(l => ({ accountId: l.accountId, bankId: l.bankId, desc: l.desc || "", debit: l.debit || "", credit: l.credit || "" }))
       : [{ accountId: accounts[0]?.id || "", desc: "", debit: "", credit: "" }, { accountId: accounts[1]?.id || "", desc: "", debit: "", credit: "" }]
   );
   const debitTotal = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
@@ -1313,6 +1435,11 @@ function TransactionForm({ accounts, currency, existing, onClose, onSubmit }) {
   function updateLine(i, patch) { setLines(ls => ls.map((l, idx) => idx === i ? { ...l, ...patch } : l)); }
   function addLine() { setLines(ls => [...ls, { accountId: accounts[0]?.id || "", desc: "", debit: "", credit: "" }]); }
   function removeLine(i) { setLines(ls => ls.filter((_, idx) => idx !== i)); }
+  function selectValue(l) { return l.bankId ? `bank:${l.bankId}` : l.accountId; }
+  function onSelectChange(i, val) {
+    if (val.startsWith("bank:")) updateLine(i, { accountId: "a1-2", bankId: val.slice(5) });
+    else updateLine(i, { accountId: val, bankId: undefined });
+  }
   return (
     <Modal title={existing ? t("tx_edit_title") : t("tx_new_title")} onClose={onClose} wide>
       <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (valid) onSubmit({ date, memo, currency: txCurrency, exchangeRate: isUsd ? Number(exchangeRate) : undefined, lines: lines.filter(l => (Number(l.debit) || Number(l.credit))) }); }}>
@@ -1334,19 +1461,24 @@ function TransactionForm({ accounts, currency, existing, onClose, onSubmit }) {
           )}
         </div>
         <div className="space-y-2">
-          <div className="text-sm text-slate-400">{t("tx_lines")} {isUsd && `(${t("tx_currency_usd")})`}</div>
-          <div className="grid grid-cols-[1fr_1fr_100px_100px_32px] gap-2 text-xs text-slate-500 px-1">
+          <div className="text-sm text-[var(--text-secondary)]">{t("tx_lines")} {isUsd && `(${t("tx_currency_usd")})`}</div>
+          <div className="grid grid-cols-[1fr_1fr_100px_100px_32px] gap-2 text-xs text-[var(--text-muted)] px-1">
             <span>{t("common_account")}</span><span>{t("tx_lineDesc")}</span><span>{t("tx_debit")}</span><span>{t("tx_credit")}</span><span></span>
           </div>
           {lines.map((l, i) => (
             <div key={i} className="grid grid-cols-[1fr_1fr_100px_100px_32px] gap-2 items-center">
-              <select className={inputCls} value={l.accountId} onChange={e => updateLine(i, { accountId: e.target.value })}>
+              <select className={inputCls} value={selectValue(l)} onChange={e => onSelectChange(i, e.target.value)}>
                 {accounts.map(a => <option key={a.id} value={a.id}>{a.code} · {accName(a)}</option>)}
+                {banks && banks.length > 0 && (
+                  <optgroup label={t("nav_banks")}>
+                    {banks.map(b => <option key={b.id} value={`bank:${b.id}`}>🏦 {b.bankName}</option>)}
+                  </optgroup>
+                )}
               </select>
               <input className={inputCls} value={l.desc} onChange={e => updateLine(i, { desc: e.target.value })} placeholder={t("tx_lineDesc")} />
               <input type="number" min={0} placeholder={t("tx_debit")} className={inputCls} value={l.debit} onChange={e => updateLine(i, { debit: e.target.value, credit: e.target.value ? "" : l.credit })} />
               <input type="number" min={0} placeholder={t("tx_credit")} className={inputCls} value={l.credit} onChange={e => updateLine(i, { credit: e.target.value, debit: e.target.value ? "" : l.debit })} />
-              <button type="button" onClick={() => removeLine(i)} className="text-slate-600 hover:text-rose-400 justify-self-center">{Ic("trash", { size: 15 })}</button>
+              <button type="button" onClick={() => removeLine(i)} className="text-[var(--text-muted)] hover:text-rose-400 justify-self-center">{Ic("trash", { size: 15 })}</button>
             </div>
           ))}
           <button type="button" onClick={addLine} className="text-cyan-300 text-sm font-bold flex items-center gap-1 pt-1">{Ic("plus", { size: 14 })} {t("tx_addLine")}</button>
@@ -1380,8 +1512,8 @@ function ItemsEditor({ items, setItems, currency, products, priceField }) {
   const hasProducts = products && products.length > 0;
   return (
     <div className="space-y-2">
-      <div className="text-sm text-slate-400">{t("inv_items")}</div>
-      <div className="grid grid-cols-[1fr_70px_100px_90px_32px] gap-2 text-xs text-slate-500 px-1">
+      <div className="text-sm text-[var(--text-secondary)]">{t("inv_items")}</div>
+      <div className="grid grid-cols-[1fr_70px_100px_90px_32px] gap-2 text-xs text-[var(--text-muted)] px-1">
         <span>{t("common_description")}</span><span>{t("common_qty")}</span><span>{t("common_price")}</span><span>{t("common_total")}</span><span></span>
       </div>
       {items.map((it, i) => (
@@ -1396,14 +1528,14 @@ function ItemsEditor({ items, setItems, currency, products, priceField }) {
             <input className={inputCls} value={it.desc} onChange={e => update(i, { desc: e.target.value })} placeholder={t("common_description")} disabled={!!it.productId} />
             <input type="number" min={0} className={inputCls} value={it.qty} onChange={e => update(i, { qty: e.target.value })} />
             <input type="number" min={0} className={inputCls} value={it.price} onChange={e => update(i, { price: e.target.value })} />
-            <div className="text-sm tabular text-slate-300 text-center">{fmt((Number(it.qty) || 0) * (Number(it.price) || 0))}</div>
-            <button type="button" onClick={() => remove(i)} className="text-slate-600 hover:text-rose-400 justify-self-center">{Ic("trash", { size: 15 })}</button>
+            <div className="text-sm tabular text-[var(--text-secondary)] text-center">{fmt((Number(it.qty) || 0) * (Number(it.price) || 0))}</div>
+            <button type="button" onClick={() => remove(i)} className="text-[var(--text-muted)] hover:text-rose-400 justify-self-center">{Ic("trash", { size: 15 })}</button>
           </div>
         </div>
       ))}
       <button type="button" onClick={add} className="text-cyan-300 text-sm font-bold flex items-center gap-1 pt-1">{Ic("plus", { size: 14 })} {t("inv_addItem")}</button>
-      <div className="flex justify-between items-center rounded-lg bg-white/5 px-3 py-2 mt-2 font-bold">
-        <span className="text-sm text-slate-300">{t("inv_grandTotal")}</span>
+      <div className="flex justify-between items-center rounded-lg bg-[var(--overlay-1)] px-3 py-2 mt-2 font-bold">
+        <span className="text-sm text-[var(--text-secondary)]">{t("inv_grandTotal")}</span>
         <span className="tabular text-cyan-300">{fmt(total)} {currency}</span>
       </div>
     </div>
@@ -1492,25 +1624,25 @@ function InvoicePrintModal({ invoice, kind, company, currency, partner, bank, on
             <CompanyLogo name={company?.name} size={44} />
             <div>
               <div className="text-xl font-black">{company?.name}</div>
-              <div className="text-sm text-slate-500">{company?.activity}</div>
-              <div className="text-xs text-slate-500 mt-1">{company?.phone} · {company?.address}</div>
+              <div className="text-sm text-[var(--text-muted)]">{company?.activity}</div>
+              <div className="text-xs text-[var(--text-muted)] mt-1">{company?.phone} · {company?.address}</div>
             </div>
           </div>
           <div className="text-right">
             <div className="text-lg font-black">{isSale ? (t("inv_salesTitle")) : (t("inv_purchasesTitle"))}</div>
-            <div className="text-sm text-slate-600 tabular">#{invoice.number}</div>
-            <div className="text-xs text-slate-500 tabular">{invoice.date}</div>
+            <div className="text-sm text-[var(--text-muted)] tabular">#{invoice.number}</div>
+            <div className="text-xs text-[var(--text-muted)] tabular">{invoice.date}</div>
           </div>
         </div>
 
         <div className="mb-4">
-          <div className="text-xs text-slate-500 mb-1">{t("inv_billTo")}</div>
+          <div className="text-xs text-[var(--text-muted)] mb-1">{t("inv_billTo")}</div>
           <div className="font-bold">{partner?.name}</div>
-          <div className="text-xs text-slate-500">{partner?.phone} {partner?.email ? "· " + partner.email : ""}</div>
+          <div className="text-xs text-[var(--text-muted)]">{partner?.phone} {partner?.email ? "· " + partner.email : ""}</div>
         </div>
 
         <table className="w-full text-sm mb-4">
-          <thead><tr className="border-b border-slate-300 text-xs text-slate-500"><th className="text-right py-2">{t("common_description")}</th><th className="text-right py-2">{t("common_qty")}</th><th className="text-right py-2">{t("common_price")}</th><th className="text-left py-2">{t("common_total")}</th></tr></thead>
+          <thead><tr className="border-b border-slate-300 text-xs text-[var(--text-muted)]"><th className="text-right py-2">{t("common_description")}</th><th className="text-right py-2">{t("common_qty")}</th><th className="text-right py-2">{t("common_price")}</th><th className="text-left py-2">{t("common_total")}</th></tr></thead>
           <tbody>
             {(invoice.items || []).map(it => (
               <tr key={it.id} className="border-b border-slate-100">
@@ -1531,17 +1663,17 @@ function InvoicePrintModal({ invoice, kind, company, currency, partner, bank, on
 
         <div className="mt-6 flex items-center justify-between text-sm">
           <StatusPill status={invoice.status} />
-          {bank && <div className="text-xs text-slate-500">{t("inv_paidVia")}: {bank.bankName} · {bank.accountNumber}</div>}
+          {bank && <div className="text-xs text-[var(--text-muted)]">{t("inv_paidVia")}: {bank.bankName} · {bank.accountNumber}</div>}
         </div>
 
         <div className="mt-10 grid grid-cols-2 gap-8">
           <div className="text-center">
             <div className="h-12"></div>
-            <div className="border-t border-slate-400 pt-2 text-xs text-slate-600">{t("inv_managerSign")}</div>
+            <div className="border-t border-slate-400 pt-2 text-xs text-[var(--text-muted)]">{t("inv_managerSign")}</div>
           </div>
           <div className="text-center">
             <div className="h-12"></div>
-            <div className="border-t border-slate-400 pt-2 text-xs text-slate-600">{t("inv_accountantSign")}</div>
+            <div className="border-t border-slate-400 pt-2 text-xs text-[var(--text-muted)]">{t("inv_accountantSign")}</div>
           </div>
         </div>
       </div>
@@ -1557,32 +1689,32 @@ function InvoiceTable({ kind, rows, who, whoKey, currency, onAdd, onDelete, onTo
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic(isSale ? "fileText" : "fileMinus", { size: 22 })}</span> {isSale ? t("inv_salesTitle") : t("inv_purchasesTitle")}</h1><p className="text-slate-500 text-sm mt-1">{rows.length} · {fmt(total)} {currency}</p></div>
+        <div><h1 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-2"><span className="text-cyan-300">{Ic(isSale ? "fileText" : "fileMinus", { size: 22 })}</span> {isSale ? t("inv_salesTitle") : t("inv_purchasesTitle")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{rows.length} · {fmt(total)} {currency}</p></div>
         <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("inv_new")}</PrimaryBtn>
       </div>
-      <div className="rounded-2xl border border-white/5 bg-[#111B2E] overflow-x-auto">
+      <div className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] overflow-x-auto">
         <table className="w-full text-sm min-w-[760px]">
-          <thead><tr className="text-slate-500 text-xs border-b border-white/5">
+          <thead><tr className="text-[var(--text-muted)] text-xs border-b border-[var(--border-app)]">
             <th className="text-right font-bold px-5 py-3">{t("inv_number")}</th><th className="text-right font-bold px-5 py-3">{isSale ? t("inv_customer") : t("inv_supplier")}</th>
             <th className="text-right font-bold px-5 py-3">{t("inv_items")}</th><th className="text-right font-bold px-5 py-3">{t("common_date")}</th>
             <th className="text-right font-bold px-5 py-3">{t("common_total")}</th><th className="text-right font-bold px-5 py-3">{t("common_status")}</th><th className="px-5 py-3"></th>
           </tr></thead>
           <tbody>
             {rows.map(r => (
-              <tr key={r.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
-                <td className="px-5 py-3 font-bold text-slate-300 tabular">{r.number}</td>
-                <td className="px-5 py-3 text-slate-300">{whoName(r[whoKey])}</td>
-                <td className="px-5 py-3 text-slate-400">{(r.items || []).length} {t("inv_itemsCount")}</td>
-                <td className="px-5 py-3 text-slate-500 tabular">{r.date}</td>
-                <td className="px-5 py-3 tabular font-bold text-slate-100">{fmt(invoiceTotal(r))} {currency}</td>
+              <tr key={r.id} className="border-b border-[var(--border-app)] last:border-0 hover:bg-[var(--overlay-1)]">
+                <td className="px-5 py-3 font-bold text-[var(--text-secondary)] tabular">{r.number}</td>
+                <td className="px-5 py-3 text-[var(--text-secondary)]">{whoName(r[whoKey])}</td>
+                <td className="px-5 py-3 text-[var(--text-secondary)]">{(r.items || []).length} {t("inv_itemsCount")}</td>
+                <td className="px-5 py-3 text-[var(--text-muted)] tabular">{r.date}</td>
+                <td className="px-5 py-3 tabular font-bold text-[var(--text-primary)]">{fmt(invoiceTotal(r))} {currency}</td>
                 <td className="px-5 py-3"><button onClick={() => onToggle(r.id)}><StatusPill status={r.status} /></button></td>
                 <td className="px-5 py-3 text-left flex items-center gap-2 justify-end">
-                  <button onClick={() => onPrint(r)} className="text-slate-500 hover:text-cyan-300" title={t("btn_print")}>{Ic("printer", { size: 15 })}</button>
-                  <button onClick={() => onDelete(r.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
+                  <button onClick={() => onPrint(r)} className="text-[var(--text-muted)] hover:text-cyan-300" title={t("btn_print")}>{Ic("printer", { size: 15 })}</button>
+                  <button onClick={() => onDelete(r.id)} className="text-[var(--text-muted)] hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={7} className="text-center text-slate-600 py-10">{isSale ? t("inv_emptySales") : t("inv_emptyPurchases")}</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={7} className="text-center text-[var(--text-muted)] py-10">{isSale ? t("inv_emptySales") : t("inv_emptyPurchases")}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1597,22 +1729,22 @@ function PeopleTable({ kind, rows, currency, onAdd, onDelete }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic(isCust ? "users" : "building", { size: 22 })}</span> {isCust ? t("people_customersTitle") : t("people_suppliersTitle")}</h1><p className="text-slate-500 text-sm mt-1">{rows.length} {t("common_records")}</p></div>
+        <div><h1 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-2"><span className="text-cyan-300">{Ic(isCust ? "users" : "building", { size: 22 })}</span> {isCust ? t("people_customersTitle") : t("people_suppliersTitle")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{rows.length} {t("common_records")}</p></div>
         <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("btn_add")}</PrimaryBtn>
       </div>
       <div className="grid md:grid-cols-2 gap-4">
         {rows.map(p => (
-          <div key={p.id} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5 flex items-start justify-between">
+          <div key={p.id} className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] p-5 flex items-start justify-between">
             <div>
-              <div className="font-bold text-slate-100">{p.name}</div>
-              <div className="text-xs text-slate-500 mt-1">{p.phone}</div>
-              <div className="text-xs text-slate-500">{p.email}</div>
-              <div className={`mt-3 text-sm font-bold tabular ${p.balance > 0 ? "text-amber-300" : "text-slate-500"}`}>{isCust ? t("people_dueFromCustomer") : t("people_dueToSupplier")}: {fmt(p.balance)} {currency}</div>
+              <div className="font-bold text-[var(--text-primary)]">{p.name}</div>
+              <div className="text-xs text-[var(--text-muted)] mt-1">{p.phone}</div>
+              <div className="text-xs text-[var(--text-muted)]">{p.email}</div>
+              <div className={`mt-3 text-sm font-bold tabular ${p.balance > 0 ? "text-amber-300" : "text-[var(--text-muted)]"}`}>{isCust ? t("people_dueFromCustomer") : t("people_dueToSupplier")}: {fmt(p.balance)} {currency}</div>
             </div>
-            <button onClick={() => onDelete(p.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
+            <button onClick={() => onDelete(p.id)} className="text-[var(--text-muted)] hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
           </div>
         ))}
-        {rows.length === 0 && <div className="text-slate-600 text-sm">{t("people_empty")}</div>}
+        {rows.length === 0 && <div className="text-[var(--text-muted)] text-sm">{t("people_empty")}</div>}
       </div>
     </div>
   );
@@ -1633,20 +1765,20 @@ function EmployeesTable({ rows, currency, onAdd, onDelete }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("briefcase", { size: 22 })}</span> {t("emp_title")}</h1><p className="text-slate-500 text-sm mt-1">{rows.length} · {t("emp_totalSalaries")} {fmt(totalSalaries)} {currency}</p></div>
+        <div><h1 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-2"><span className="text-cyan-300">{Ic("briefcase", { size: 22 })}</span> {t("emp_title")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{rows.length} · {t("emp_totalSalaries")} {fmt(totalSalaries)} {currency}</p></div>
         <div className="flex items-center gap-2">
-          <div className="no-print flex rounded-lg bg-white/5 p-1">
-            <button onClick={() => setView("list")} className={`px-3 py-1.5 rounded-md text-xs font-bold ${view === "list" ? "bg-cyan-400 text-[#07101E]" : "text-slate-400"}`}>{t("emp_viewList")}</button>
-            <button onClick={() => setView("org")} className={`px-3 py-1.5 rounded-md text-xs font-bold ${view === "org" ? "bg-cyan-400 text-[#07101E]" : "text-slate-400"}`}>{t("emp_viewOrg")}</button>
+          <div className="no-print flex rounded-lg bg-[var(--overlay-1)] p-1">
+            <button onClick={() => setView("list")} className={`px-3 py-1.5 rounded-md text-xs font-bold ${view === "list" ? "bg-cyan-400 text-[#07101E]" : "text-[var(--text-secondary)]"}`}>{t("emp_viewList")}</button>
+            <button onClick={() => setView("org")} className={`px-3 py-1.5 rounded-md text-xs font-bold ${view === "org" ? "bg-cyan-400 text-[#07101E]" : "text-[var(--text-secondary)]"}`}>{t("emp_viewOrg")}</button>
           </div>
           <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("emp_new")}</PrimaryBtn>
         </div>
       </div>
 
       {view === "list" ? (
-        <div className="rounded-2xl border border-white/5 bg-[#111B2E] overflow-x-auto">
+        <div className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] overflow-x-auto">
           <table className="w-full text-sm min-w-[760px]">
-            <thead><tr className="text-slate-500 text-xs border-b border-white/5">
+            <thead><tr className="text-[var(--text-muted)] text-xs border-b border-[var(--border-app)]">
               <th className="text-right font-bold px-5 py-3">{t("common_name")}</th><th className="text-right font-bold px-5 py-3">{t("emp_position")}</th>
               <th className="text-right font-bold px-5 py-3">{t("emp_department")}</th><th className="text-right font-bold px-5 py-3">{t("emp_reportsTo")}</th>
               <th className="text-right font-bold px-5 py-3">{t("common_phone")}</th>
@@ -1654,36 +1786,36 @@ function EmployeesTable({ rows, currency, onAdd, onDelete }) {
             </tr></thead>
             <tbody>
               {rows.map(e => (
-                <tr key={e.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
-                  <td className="px-5 py-3 font-bold text-slate-200">{e.name}</td>
-                  <td className="px-5 py-3 text-slate-400">{e.position}</td>
-                  <td className="px-5 py-3 text-slate-400">{e.department || "—"}</td>
-                  <td className="px-5 py-3 text-slate-500">{e.managerId ? empName(e.managerId) : "—"}</td>
-                  <td className="px-5 py-3 text-slate-500 tabular">{e.phone}</td>
+                <tr key={e.id} className="border-b border-[var(--border-app)] last:border-0 hover:bg-[var(--overlay-1)]">
+                  <td className="px-5 py-3 font-bold text-[var(--text-primary)]">{e.name}</td>
+                  <td className="px-5 py-3 text-[var(--text-secondary)]">{e.position}</td>
+                  <td className="px-5 py-3 text-[var(--text-secondary)]">{e.department || "—"}</td>
+                  <td className="px-5 py-3 text-[var(--text-muted)]">{e.managerId ? empName(e.managerId) : "—"}</td>
+                  <td className="px-5 py-3 text-[var(--text-muted)] tabular">{e.phone}</td>
                   <td className="px-5 py-3 tabular font-bold text-emerald-300">{fmt(e.salary)} {currency}</td>
-                  <td className="px-5 py-3 text-left"><button onClick={() => onDelete(e.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button></td>
+                  <td className="px-5 py-3 text-left"><button onClick={() => onDelete(e.id)} className="text-[var(--text-muted)] hover:text-rose-400">{Ic("trash", { size: 15 })}</button></td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={7} className="text-center text-slate-600 py-10">{t("emp_empty")}</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={7} className="text-center text-[var(--text-muted)] py-10">{t("emp_empty")}</td></tr>}
             </tbody>
           </table>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           {Object.entries(byDept).map(([dept, emps]) => (
-            <div key={dept} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+            <div key={dept} className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] p-5">
               <div className="font-black text-cyan-300 mb-3">{dept}</div>
               <div className="space-y-2">
                 {emps.map(e => (
-                  <div key={e.id} className="border-b border-white/5 pb-2 last:border-0">
-                    <div className="font-bold text-slate-200 text-sm">{e.name} <span className="text-slate-500 font-normal">— {e.position}</span></div>
-                    <div className="text-xs text-slate-500">{t("emp_reportsTo")}: {e.managerId ? empName(e.managerId) : t("emp_topLevel")}</div>
+                  <div key={e.id} className="border-b border-[var(--border-app)] pb-2 last:border-0">
+                    <div className="font-bold text-[var(--text-primary)] text-sm">{e.name} <span className="text-[var(--text-muted)] font-normal">— {e.position}</span></div>
+                    <div className="text-xs text-[var(--text-muted)]">{t("emp_reportsTo")}: {e.managerId ? empName(e.managerId) : t("emp_topLevel")}</div>
                   </div>
                 ))}
               </div>
             </div>
           ))}
-          {rows.length === 0 && <div className="text-slate-600 text-sm">{t("emp_empty")}</div>}
+          {rows.length === 0 && <div className="text-[var(--text-muted)] text-sm">{t("emp_empty")}</div>}
         </div>
       )}
     </div>
@@ -1700,28 +1832,28 @@ function AttendancePage({ records, employees, onAdd, onDelete }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("calendar", { size: 22 })}</span> {t("att_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("att_subtitle")}</p></div>
+        <div><h1 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-2"><span className="text-cyan-300">{Ic("calendar", { size: 22 })}</span> {t("att_title")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{t("att_subtitle")}</p></div>
         <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("att_new")}</PrimaryBtn>
       </div>
-      <div className="rounded-2xl border border-white/5 bg-[#111B2E] overflow-x-auto">
+      <div className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] overflow-x-auto">
         <table className="w-full text-sm min-w-[640px]">
-          <thead><tr className="text-slate-500 text-xs border-b border-white/5">
+          <thead><tr className="text-[var(--text-muted)] text-xs border-b border-[var(--border-app)]">
             <th className="text-right font-bold px-5 py-3">{t("att_employee")}</th><th className="text-right font-bold px-5 py-3">{t("common_date")}</th>
             <th className="text-right font-bold px-5 py-3">{t("att_checkIn")}</th><th className="text-right font-bold px-5 py-3">{t("att_checkOut")}</th>
             <th className="text-right font-bold px-5 py-3">{t("att_status")}</th><th className="px-5 py-3"></th>
           </tr></thead>
           <tbody>
             {sorted.map(r => (
-              <tr key={r.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
-                <td className="px-5 py-3 font-bold text-slate-200">{empName(r.employeeId)}</td>
-                <td className="px-5 py-3 text-slate-500 tabular">{r.date}</td>
-                <td className="px-5 py-3 text-slate-400 tabular">{r.checkIn || "—"}</td>
-                <td className="px-5 py-3 text-slate-400 tabular">{r.checkOut || "—"}</td>
+              <tr key={r.id} className="border-b border-[var(--border-app)] last:border-0 hover:bg-[var(--overlay-1)]">
+                <td className="px-5 py-3 font-bold text-[var(--text-primary)]">{empName(r.employeeId)}</td>
+                <td className="px-5 py-3 text-[var(--text-muted)] tabular">{r.date}</td>
+                <td className="px-5 py-3 text-[var(--text-secondary)] tabular">{r.checkIn || "—"}</td>
+                <td className="px-5 py-3 text-[var(--text-secondary)] tabular">{r.checkOut || "—"}</td>
                 <td className="px-5 py-3"><span className={`text-[11px] px-2 py-1 rounded-full ${STATUS_COLOR[r.status]}`}>{STATUS_LABEL[r.status]}</span></td>
-                <td className="px-5 py-3 text-left"><button onClick={() => onDelete(r.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button></td>
+                <td className="px-5 py-3 text-left"><button onClick={() => onDelete(r.id)} className="text-[var(--text-muted)] hover:text-rose-400">{Ic("trash", { size: 15 })}</button></td>
               </tr>
             ))}
-            {sorted.length === 0 && <tr><td colSpan={6} className="text-center text-slate-600 py-10">{t("att_empty")}</td></tr>}
+            {sorted.length === 0 && <tr><td colSpan={6} className="text-center text-[var(--text-muted)] py-10">{t("att_empty")}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1765,36 +1897,36 @@ function PayrollPage({ runs, employees, currency, isAdmin, onAdd, onMarkPaid }) 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("cash", { size: 22 })}</span> {t("pay_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("pay_subtitle")}</p></div>
+        <div><h1 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-2"><span className="text-cyan-300">{Ic("cash", { size: 22 })}</span> {t("pay_title")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{t("pay_subtitle")}</p></div>
         {isAdmin && <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("pay_new")}</PrimaryBtn>}
       </div>
       <div className="space-y-3">
         {runs.map(run => (
-          <div key={run.id} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+          <div key={run.id} className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] p-5">
             <div className="flex items-start justify-between">
               <div>
-                <div className="font-bold text-slate-100 tabular">{run.month}</div>
-                <div className="text-xs text-slate-500 mt-0.5">{run.items.length} · {t("pay_total")}: <span className="tabular font-bold text-cyan-300">{fmt(run.total)} {currency}</span></div>
+                <div className="font-bold text-[var(--text-primary)] tabular">{run.month}</div>
+                <div className="text-xs text-[var(--text-muted)] mt-0.5">{run.items.length} · {t("pay_total")}: <span className="tabular font-bold text-cyan-300">{fmt(run.total)} {currency}</span></div>
               </div>
               {run.status === "مدفوعة"
                 ? <span className="text-[11px] px-2 py-1 rounded-full bg-emerald-400/10 text-emerald-300">{t("pay_paid")}</span>
                 : (isAdmin && <GhostBtn onClick={() => onMarkPaid(run)}>{t("pay_markPaid")}</GhostBtn>)}
             </div>
-            <div className="mt-3 border-t border-white/5 pt-3 space-y-1.5">
+            <div className="mt-3 border-t border-[var(--border-app)] pt-3 space-y-1.5">
               {run.items.map((it, i) => {
                 const emp = employees.find(e => e.id === it.employeeId);
                 return (
                   <div key={i} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-400">{emp?.name || "—"}</span>
-                    <span className="tabular text-slate-300">{fmt(it.net)} {currency}</span>
+                    <span className="text-[var(--text-secondary)]">{emp?.name || "—"}</span>
+                    <span className="tabular text-[var(--text-secondary)]">{fmt(it.net)} {currency}</span>
                   </div>
                 );
               })}
             </div>
-            {run.status === "مدفوعة" && <div className="text-xs text-slate-600 mt-3">{t("pay_postedNote")}</div>}
+            {run.status === "مدفوعة" && <div className="text-xs text-[var(--text-muted)] mt-3">{t("pay_postedNote")}</div>}
           </div>
         ))}
-        {runs.length === 0 && <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-slate-600 text-sm">{t("pay_empty")}</div>}
+        {runs.length === 0 && <div className="rounded-2xl border border-dashed border-[var(--border-app2)] p-10 text-center text-[var(--text-muted)] text-sm">{t("pay_empty")}</div>}
       </div>
     </div>
   );
@@ -1816,7 +1948,7 @@ function PayrollForm({ employees, currency, onClose, onSubmit }) {
   }
 
   if (employees.length === 0) {
-    return <Modal title={t("pay_newTitle")} onClose={onClose}><p className="text-sm text-slate-400">{t("pay_noEmployees")}</p></Modal>;
+    return <Modal title={t("pay_newTitle")} onClose={onClose}><p className="text-sm text-[var(--text-secondary)]">{t("pay_noEmployees")}</p></Modal>;
   }
 
   return (
@@ -1824,7 +1956,7 @@ function PayrollForm({ employees, currency, onClose, onSubmit }) {
       <form className="space-y-4" onSubmit={submit}>
         <Field label={t("pay_month")}><input type="month" className={inputCls} value={month} onChange={e => setMonth(e.target.value)} /></Field>
         <div className="space-y-2">
-          <div className="grid grid-cols-[1.3fr_1fr_1fr_1fr_1fr] gap-2 text-xs text-slate-500 px-1">
+          <div className="grid grid-cols-[1.3fr_1fr_1fr_1fr_1fr] gap-2 text-xs text-[var(--text-muted)] px-1">
             <span>{t("common_name")}</span><span>{t("pay_base")}</span><span>{t("pay_bonus")}</span><span>{t("pay_deduction")}</span><span>{t("pay_net")}</span>
           </div>
           {items.map((it, i) => {
@@ -1832,7 +1964,7 @@ function PayrollForm({ employees, currency, onClose, onSubmit }) {
             const net = (Number(it.base) || 0) + (Number(it.bonus) || 0) - (Number(it.deduction) || 0);
             return (
               <div key={it.employeeId} className="grid grid-cols-[1.3fr_1fr_1fr_1fr_1fr] gap-2 items-center">
-                <span className="text-sm text-slate-300 truncate">{emp?.name}</span>
+                <span className="text-sm text-[var(--text-secondary)] truncate">{emp?.name}</span>
                 <input type="number" min={0} className={inputCls} value={it.base} onChange={e => update(i, { base: e.target.value })} />
                 <input type="number" min={0} className={inputCls} value={it.bonus} onChange={e => update(i, { bonus: e.target.value })} />
                 <input type="number" min={0} className={inputCls} value={it.deduction} onChange={e => update(i, { deduction: e.target.value })} />
@@ -1841,8 +1973,8 @@ function PayrollForm({ employees, currency, onClose, onSubmit }) {
             );
           })}
         </div>
-        <div className="flex justify-between items-center rounded-lg bg-white/5 px-3 py-2 font-bold">
-          <span className="text-sm text-slate-300">{t("pay_total")}</span>
+        <div className="flex justify-between items-center rounded-lg bg-[var(--overlay-1)] px-3 py-2 font-bold">
+          <span className="text-sm text-[var(--text-secondary)]">{t("pay_total")}</span>
           <span className="tabular text-cyan-300">{fmt(total)} {currency}</span>
         </div>
         <div className="flex justify-end gap-2 pt-2"><PrimaryBtn type="submit" disabled={!valid}>{t("btn_save")}</PrimaryBtn></div>
@@ -1857,30 +1989,30 @@ function BanksPage({ banks, currency, onAdd, onDelete, onEdit, isAdmin }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("bank", { size: 22 })}</span> {t("bank_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("bank_subtitle")}</p></div>
+        <div><h1 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-2"><span className="text-cyan-300">{Ic("bank", { size: 22 })}</span> {t("bank_title")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{t("bank_subtitle")}</p></div>
         <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("bank_new")}</PrimaryBtn>
       </div>
-      <div className="no-print text-xs text-slate-500 bg-white/5 rounded-lg px-3 py-2 mb-4">{t("bank_hint")}</div>
+      <div className="no-print text-xs text-[var(--text-muted)] bg-[var(--overlay-1)] rounded-lg px-3 py-2 mb-4">{t("bank_hint")}</div>
       <div className="grid md:grid-cols-2 gap-4">
         {banks.map(b => (
-          <div key={b.id} className="rounded-2xl border border-white/5 bg-[#111B2E] p-5">
+          <div key={b.id} className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] p-5">
             <div className="flex items-start justify-between">
               <div>
-                <div className="font-bold text-slate-100">{b.bankName}</div>
-                <div className="text-xs text-slate-500 mt-1 tabular">{t("bank_accountNumber")}: {b.accountNumber}</div>
-                {b.iban && <div className="text-xs text-slate-500 tabular">IBAN: {b.iban}</div>}
-                {b.branch && <div className="text-xs text-slate-500">{b.branch}</div>}
-                {b.notes && <div className="text-xs text-slate-600 mt-1">{b.notes}</div>}
+                <div className="font-bold text-[var(--text-primary)]">{b.bankName}</div>
+                <div className="text-xs text-[var(--text-muted)] mt-1 tabular">{t("bank_accountNumber")}: {b.accountNumber}</div>
+                {b.iban && <div className="text-xs text-[var(--text-muted)] tabular">IBAN: {b.iban}</div>}
+                {b.branch && <div className="text-xs text-[var(--text-muted)]">{b.branch}</div>}
+                {b.notes && <div className="text-xs text-[var(--text-muted)] mt-1">{b.notes}</div>}
               </div>
-              <button onClick={() => onDelete(b.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
+              <button onClick={() => onDelete(b.id)} className="text-[var(--text-muted)] hover:text-rose-400">{Ic("trash", { size: 15 })}</button>
             </div>
-            <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
-              <span className="text-xs text-slate-500">{t("bank_balance")}</span>
-              {isAdmin ? <EditableBalance value={b.balance} currency={currency} onSave={(v) => onEdit(b.id, v)} /> : <span className="tabular font-bold text-slate-200">{fmt(b.balance)} {currency}</span>}
+            <div className="mt-3 pt-3 border-t border-[var(--border-app)] flex items-center justify-between">
+              <span className="text-xs text-[var(--text-muted)]">{t("bank_balance")}</span>
+              {isAdmin ? <EditableBalance value={b.balance} currency={currency} onSave={(v) => onEdit(b.id, v)} /> : <span className="tabular font-bold text-[var(--text-primary)]">{fmt(b.balance)} {currency}</span>}
             </div>
           </div>
         ))}
-        {banks.length === 0 && <div className="text-slate-600 text-sm">{t("bank_empty")}</div>}
+        {banks.length === 0 && <div className="text-[var(--text-muted)] text-sm">{t("bank_empty")}</div>}
       </div>
     </div>
   );
@@ -1910,39 +2042,39 @@ function InventoryPage({ products, currency, isAdmin, onAdd, onDelete, onEdit })
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("box", { size: 22 })}</span> {t("stock_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("stock_subtitle")}</p></div>
+        <div><h1 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-2"><span className="text-cyan-300">{Ic("box", { size: 22 })}</span> {t("stock_title")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{t("stock_subtitle")}</p></div>
         <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("stock_new")}</PrimaryBtn>
       </div>
-      <div className="rounded-2xl border border-white/5 bg-[#111B2E] overflow-x-auto">
+      <div className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] overflow-x-auto">
         <table className="w-full text-sm min-w-[720px]">
-          <thead><tr className="text-slate-500 text-xs border-b border-white/5">
+          <thead><tr className="text-[var(--text-muted)] text-xs border-b border-[var(--border-app)]">
             <th className="text-right font-bold px-5 py-3">{t("stock_sku")}</th><th className="text-right font-bold px-5 py-3">{t("common_name")}</th>
             <th className="text-right font-bold px-5 py-3">{t("stock_unit")}</th><th className="text-right font-bold px-5 py-3">{t("stock_cost")}</th>
             <th className="text-right font-bold px-5 py-3">{t("stock_salePrice")}</th><th className="text-right font-bold px-5 py-3">{t("stock_current")}</th><th className="px-5 py-3"></th>
           </tr></thead>
           <tbody>
             {products.map(p => (
-              <tr key={p.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
-                <td className="px-5 py-3 text-slate-400 tabular">{p.sku}</td>
-                <td className="px-5 py-3 font-bold text-slate-200">{p.name}</td>
-                <td className="px-5 py-3 text-slate-500">{p.unit}</td>
-                <td className="px-5 py-3 tabular text-slate-300">{fmt(p.costPrice)} {currency}</td>
-                <td className="px-5 py-3 tabular text-slate-300">{fmt(p.salePrice)} {currency}</td>
+              <tr key={p.id} className="border-b border-[var(--border-app)] last:border-0 hover:bg-[var(--overlay-1)]">
+                <td className="px-5 py-3 text-[var(--text-secondary)] tabular">{p.sku}</td>
+                <td className="px-5 py-3 font-bold text-[var(--text-primary)]">{p.name}</td>
+                <td className="px-5 py-3 text-[var(--text-muted)]">{p.unit}</td>
+                <td className="px-5 py-3 tabular text-[var(--text-secondary)]">{fmt(p.costPrice)} {currency}</td>
+                <td className="px-5 py-3 tabular text-[var(--text-secondary)]">{fmt(p.salePrice)} {currency}</td>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-2">
                     <span className={`tabular font-bold ${p.stock <= 5 ? "text-rose-300" : "text-emerald-300"}`}>{fmt(p.stock)} {p.unit}</span>
                     {p.stock <= 5 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-400/10 text-rose-300">{t("stock_low")}</span>}
                   </div>
                 </td>
-                <td className="px-5 py-3 text-left"><button onClick={() => onDelete(p.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button></td>
+                <td className="px-5 py-3 text-left"><button onClick={() => onDelete(p.id)} className="text-[var(--text-muted)] hover:text-rose-400">{Ic("trash", { size: 15 })}</button></td>
               </tr>
             ))}
-            {products.length === 0 && <tr><td colSpan={7} className="text-center text-slate-600 py-10">{t("stock_empty")}</td></tr>}
+            {products.length === 0 && <tr><td colSpan={7} className="text-center text-[var(--text-muted)] py-10">{t("stock_empty")}</td></tr>}
           </tbody>
         </table>
       </div>
       {isAdmin && products.length > 0 && (
-        <div className="no-print text-xs text-slate-500 bg-white/5 rounded-lg px-3 py-2 mt-4">{t("stock_opening")}: {t("perm_adminOnly")}</div>
+        <div className="no-print text-xs text-[var(--text-muted)] bg-[var(--overlay-1)] rounded-lg px-3 py-2 mt-4">{t("stock_opening")}: {t("perm_adminOnly")}</div>
       )}
     </div>
   );
@@ -1978,27 +2110,27 @@ function UsersPage({ users, currentUser, onAdd, onDelete }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("user", { size: 22 })}</span> {t("users_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("users_subtitle")}</p></div>
+        <div><h1 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-2"><span className="text-cyan-300">{Ic("user", { size: 22 })}</span> {t("users_title")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{t("users_subtitle")}</p></div>
         {isAdmin && <PrimaryBtn onClick={onAdd}>{Ic("plus", { size: 16 })} {t("users_new")}</PrimaryBtn>}
       </div>
-      <div className="rounded-2xl border border-white/5 bg-[#111B2E] divide-y divide-white/5">
+      <div className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] divide-y divide-[var(--border-app)]">
         {users.map(u => (
           <div key={u.id} className="flex items-center justify-between px-5 py-3.5">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-300 font-bold text-sm">{u.fullName.charAt(0)}</div>
+              <div className="w-8 h-8 rounded-lg bg-[var(--overlay-1)] flex items-center justify-center text-[var(--text-secondary)] font-bold text-sm">{u.fullName.charAt(0)}</div>
               <div>
-                <div className="text-sm font-bold text-slate-200">{u.fullName} {u.id === currentUser.id && <span className="text-xs text-cyan-300">({t("users_you")})</span>}</div>
-                <div className="text-xs text-slate-500">@{u.username}</div>
+                <div className="text-sm font-bold text-[var(--text-primary)]">{u.fullName} {u.id === currentUser.id && <span className="text-xs text-cyan-300">({t("users_you")})</span>}</div>
+                <div className="text-xs text-[var(--text-muted)]">@{u.username}</div>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`text-[11px] px-2 py-1 rounded-full ${u.role === "admin" ? "bg-cyan-400/10 text-cyan-300" : "bg-white/5 text-slate-400"}`}>{u.role === "admin" ? t("users_admin") : t("users_user")}</span>
-              {isAdmin && u.id !== currentUser.id && <button onClick={() => onDelete(u.id)} className="text-slate-600 hover:text-rose-400">{Ic("trash", { size: 15 })}</button>}
+              <span className={`text-[11px] px-2 py-1 rounded-full ${u.role === "admin" ? "bg-cyan-400/10 text-cyan-300" : "bg-[var(--overlay-1)] text-[var(--text-secondary)]"}`}>{u.role === "admin" ? t("users_admin") : t("users_user")}</span>
+              {isAdmin && u.id !== currentUser.id && <button onClick={() => onDelete(u.id)} className="text-[var(--text-muted)] hover:text-rose-400">{Ic("trash", { size: 15 })}</button>}
             </div>
           </div>
         ))}
       </div>
-      <div className="text-xs text-slate-600 mt-4">{t("users_securityNote")}</div>
+      <div className="text-xs text-[var(--text-muted)] mt-4">{t("users_securityNote")}</div>
     </div>
   );
 }
@@ -2045,10 +2177,10 @@ function ReportsPage({ data, rawAccounts, journal, currency, company }) {
   ];
   return (
     <div>
-      <div className="mb-6"><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("report", { size: 22 })}</span> {t("rep_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("rep_subtitle")}</p></div>
+      <div className="mb-6"><h1 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-2"><span className="text-cyan-300">{Ic("report", { size: 22 })}</span> {t("rep_title")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{t("rep_subtitle")}</p></div>
       <div className="no-print flex gap-2 mb-6 flex-wrap">
         {SUBTABS.map(tb => (
-          <button key={tb.key} onClick={() => setSub(tb.key)} className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ${sub === tb.key ? "bg-cyan-400 text-[#07101E]" : "bg-white/5 text-slate-300 hover:bg-white/10"}`}>{tb.label}</button>
+          <button key={tb.key} onClick={() => setSub(tb.key)} className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ${sub === tb.key ? "bg-cyan-400 text-[#07101E]" : "bg-[var(--overlay-1)] text-[var(--text-secondary)] hover:bg-[var(--overlay-2)]"}`}>{tb.label}</button>
         ))}
       </div>
       {sub === "income" && <IncomeStatement data={data} currency={currency} company={company} />}
@@ -2062,10 +2194,10 @@ function ReportsPage({ data, rawAccounts, journal, currency, company }) {
 
 function ReportShell({ title, company, currency, onPrint, children }) {
   return (
-    <div className="rounded-2xl border border-white/5 bg-[#111B2E] p-6">
+    <div className="rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] p-6">
       <PrintHeader company={company} title={title} currency={currency} />
       <div className="no-print flex items-center justify-between mb-5">
-        <h2 className="font-black text-slate-100 text-lg">{title}</h2>
+        <h2 className="font-black text-[var(--text-primary)] text-lg">{title}</h2>
         <PrintBtn full onClick={onPrint} />
       </div>
       {children}
@@ -2084,13 +2216,13 @@ function IncomeStatement({ data, currency, company }) {
   return (
     <ReportShell title={t("rep_income")} company={company} currency={currency} onPrint={() => window.print()}>
       <table className="w-full text-sm">
-        <thead><tr className="text-slate-500 text-xs border-b border-white/10"><th className="text-right py-2">{t("common_description")}</th><th className="text-left py-2">{t("common_total")} ({currency})</th></tr></thead>
+        <thead><tr className="text-[var(--text-muted)] text-xs border-b border-[var(--border-app2)]"><th className="text-right py-2">{t("common_description")}</th><th className="text-left py-2">{t("common_total")} ({currency})</th></tr></thead>
         <tbody>
           <tr><td colSpan={2} className="pt-4 pb-1 font-black text-emerald-300">{t("inc_revenue")}</td></tr>
-          {revenue.map(a => <tr key={a.id} className="border-b border-white/5"><td className="py-2 text-slate-300">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
+          {revenue.map(a => <tr key={a.id} className="border-b border-[var(--border-app)]"><td className="py-2 text-[var(--text-secondary)]">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
           <tr className="font-bold"><td className="py-2">{t("inc_totalRevenue")}</td><td className="py-2 text-left tabular text-emerald-300">{fmt(revTotal)}</td></tr>
           <tr><td colSpan={2} className="pt-6 pb-1 font-black text-amber-300">{t("inc_expense")}</td></tr>
-          {expense.map(a => <tr key={a.id} className="border-b border-white/5"><td className="py-2 text-slate-300">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
+          {expense.map(a => <tr key={a.id} className="border-b border-[var(--border-app)]"><td className="py-2 text-[var(--text-secondary)]">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
           <tr className="font-bold"><td className="py-2">{t("inc_totalExpense")}</td><td className="py-2 text-left tabular text-amber-300">{fmt(expTotal)}</td></tr>
         </tbody>
       </table>
@@ -2121,20 +2253,20 @@ function BalanceSheet({ data, currency, company }) {
         <div>
           <div className="font-black text-cyan-300 mb-2">{t("bs_assets")}</div>
           <table className="w-full text-sm"><tbody>
-            {assets.map(a => <tr key={a.id} className="border-b border-white/5"><td className="py-2 text-slate-300">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
+            {assets.map(a => <tr key={a.id} className="border-b border-[var(--border-app)]"><td className="py-2 text-[var(--text-secondary)]">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
             <tr className="font-bold"><td className="py-2">{t("bs_totalAssets")}</td><td className="py-2 text-left tabular text-cyan-300">{fmt(assetsTotal)}</td></tr>
           </tbody></table>
         </div>
         <div>
           <div className="font-black text-rose-300 mb-2">{t("bs_liabilities")}</div>
           <table className="w-full text-sm"><tbody>
-            {liabilities.map(a => <tr key={a.id} className="border-b border-white/5"><td className="py-2 text-slate-300">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
+            {liabilities.map(a => <tr key={a.id} className="border-b border-[var(--border-app)]"><td className="py-2 text-[var(--text-secondary)]">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
             <tr className="font-bold"><td className="py-2">{t("bs_totalLiabilities")}</td><td className="py-2 text-left tabular text-rose-300">{fmt(liabTotal)}</td></tr>
           </tbody></table>
           <div className="font-black text-violet-300 mb-2 mt-6">{t("bs_equity")}</div>
           <table className="w-full text-sm"><tbody>
-            {equity.map(a => <tr key={a.id} className="border-b border-white/5"><td className="py-2 text-slate-300">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
-            <tr className="border-b border-white/5"><td className="py-2 text-slate-300">{t("bs_currentProfit")}</td><td className="py-2 text-left tabular">{fmt(netProfit)}</td></tr>
+            {equity.map(a => <tr key={a.id} className="border-b border-[var(--border-app)]"><td className="py-2 text-[var(--text-secondary)]">{accName(a)}</td><td className="py-2 text-left tabular">{fmt(a.balance)}</td></tr>)}
+            <tr className="border-b border-[var(--border-app)]"><td className="py-2 text-[var(--text-secondary)]">{t("bs_currentProfit")}</td><td className="py-2 text-left tabular">{fmt(netProfit)}</td></tr>
             <tr className="font-bold"><td className="py-2">{t("bs_totalEquity")}</td><td className="py-2 text-left tabular text-violet-300">{fmt(equityTotal)}</td></tr>
           </tbody></table>
         </div>
@@ -2162,12 +2294,12 @@ function TrialBalance({ data, currency, company }) {
   return (
     <ReportShell title={t("rep_trial")} company={company} currency={currency} onPrint={() => window.print()}>
       <table className="w-full text-sm">
-        <thead><tr className="text-slate-500 text-xs border-b border-white/10"><th className="text-right py-2">{t("tb_account")}</th><th className="text-right py-2">{t("tb_type")}</th><th className="text-left py-2">{t("tx_debit")}</th><th className="text-left py-2">{t("tx_credit")}</th></tr></thead>
+        <thead><tr className="text-[var(--text-muted)] text-xs border-b border-[var(--border-app2)]"><th className="text-right py-2">{t("tb_account")}</th><th className="text-right py-2">{t("tb_type")}</th><th className="text-left py-2">{t("tx_debit")}</th><th className="text-left py-2">{t("tx_credit")}</th></tr></thead>
         <tbody>
           {lines.map(a => (
-            <tr key={a.id} className="border-b border-white/5">
-              <td className="py-2 text-slate-300">{a.code} · {accName(a)}</td>
-              <td className="py-2 text-slate-500 text-xs">{TYPE_LABEL[a.type][lang === "en" ? 1 : 0]}</td>
+            <tr key={a.id} className="border-b border-[var(--border-app)]">
+              <td className="py-2 text-[var(--text-secondary)]">{a.code} · {accName(a)}</td>
+              <td className="py-2 text-[var(--text-muted)] text-xs">{TYPE_LABEL[a.type][lang === "en" ? 1 : 0]}</td>
               <td className="py-2 text-left tabular">{a.debit ? fmt(a.debit) : "—"}</td>
               <td className="py-2 text-left tabular">{a.credit ? fmt(a.credit) : "—"}</td>
             </tr>
@@ -2221,27 +2353,27 @@ function AccountStatement({ accounts, rawAccounts, journal, currency, company })
       </div>
       <div className="print-only mb-3 font-bold">{account?.code} · {accName(account)}</div>
 
-      <div className="flex justify-between text-sm mb-3 rounded-lg bg-white/5 px-3 py-2">
-        <span className="text-slate-400">{t("stmt_opening")}</span>
-        <span className="tabular font-bold text-slate-200">{fmt(opening)} {currency}</span>
+      <div className="flex justify-between text-sm mb-3 rounded-lg bg-[var(--overlay-1)] px-3 py-2">
+        <span className="text-[var(--text-secondary)]">{t("stmt_opening")}</span>
+        <span className="tabular font-bold text-[var(--text-primary)]">{fmt(opening)} {currency}</span>
       </div>
 
       <table className="w-full text-sm">
-        <thead><tr className="text-slate-500 text-xs border-b border-white/10">
+        <thead><tr className="text-[var(--text-muted)] text-xs border-b border-[var(--border-app2)]">
           <th className="text-right py-2">{t("common_date")}</th><th className="text-right py-2">{t("stmt_source")}</th>
           <th className="text-left py-2">{t("tx_debit")}</th><th className="text-left py-2">{t("tx_credit")}</th><th className="text-left py-2">{t("stmt_runningBalance")}</th>
         </tr></thead>
         <tbody>
           {entries.map((e, i) => (
-            <tr key={i} className="border-b border-white/5">
-              <td className="py-2 text-slate-500 tabular">{e.date}</td>
-              <td className="py-2 text-slate-300">{e.memo}</td>
+            <tr key={i} className="border-b border-[var(--border-app)]">
+              <td className="py-2 text-[var(--text-muted)] tabular">{e.date}</td>
+              <td className="py-2 text-[var(--text-secondary)]">{e.memo}</td>
               <td className="py-2 text-left tabular">{e.debit ? fmt(e.debit) : "—"}</td>
               <td className="py-2 text-left tabular">{e.credit ? fmt(e.credit) : "—"}</td>
               <td className="py-2 text-left tabular font-bold text-cyan-300">{fmt(e.balance)}</td>
             </tr>
           ))}
-          {entries.length === 0 && <tr><td colSpan={5} className="text-center text-slate-600 py-10">{t("stmt_empty")}</td></tr>}
+          {entries.length === 0 && <tr><td colSpan={5} className="text-center text-[var(--text-muted)] py-10">{t("stmt_empty")}</td></tr>}
         </tbody>
       </table>
 
@@ -2258,12 +2390,12 @@ function JournalLedger({ journal, currency, company }) {
     <ReportShell title={t("rep_journal")} company={company} currency={currency} onPrint={() => window.print()}>
       <div className="space-y-4">
         {journal.map(row => (
-          <div key={row.id} className="border-b border-white/5 pb-4 last:border-0">
-            <div className="flex items-center justify-between text-sm mb-1.5"><span className="font-bold text-slate-200">{row.memo}</span><span className="text-slate-500 tabular">{row.date}</span></div>
+          <div key={row.id} className="border-b border-[var(--border-app)] pb-4 last:border-0">
+            <div className="flex items-center justify-between text-sm mb-1.5"><span className="font-bold text-[var(--text-primary)]">{row.memo}</span><span className="text-[var(--text-muted)] tabular">{row.date}</span></div>
             <table className="w-full text-xs"><tbody>
               {row.lines.map((l, i) => (
                 <tr key={i}>
-                  <td className="py-1 text-slate-400 w-1/3">{l.accountName}{l.desc && <span className="text-slate-600"> — {l.desc}</span>}</td>
+                  <td className="py-1 text-[var(--text-secondary)] w-1/3">{l.accountName}{l.desc && <span className="text-[var(--text-muted)]"> — {l.desc}</span>}</td>
                   <td className="py-1 text-left tabular w-1/3">{l.debit ? fmt(l.debit) + " " + t("tx_debit") : ""}</td>
                   <td className="py-1 text-left tabular w-1/3">{l.credit ? fmt(l.credit) + " " + t("tx_credit") : ""}</td>
                 </tr>
@@ -2271,7 +2403,7 @@ function JournalLedger({ journal, currency, company }) {
             </tbody></table>
           </div>
         ))}
-        {journal.length === 0 && <div className="text-slate-600 text-sm text-center py-10">{t("journal_empty")}</div>}
+        {journal.length === 0 && <div className="text-[var(--text-muted)] text-sm text-center py-10">{t("journal_empty")}</div>}
       </div>
     </ReportShell>
   );
@@ -2284,8 +2416,8 @@ function SettingsPanel({ company, onSave, onResetClick }) {
   const valid = f.name.trim().length > 0;
   return (
     <div className="max-w-xl">
-      <div className="mb-6"><h1 className="text-2xl font-black text-slate-50 flex items-center gap-2"><span className="text-cyan-300">{Ic("building2", { size: 22 })}</span> {t("set_title")}</h1><p className="text-slate-500 text-sm mt-1">{t("set_subtitle")}</p></div>
-      <form className="space-y-4 rounded-2xl border border-white/5 bg-[#111B2E] p-5" onSubmit={(e) => { e.preventDefault(); if (valid) onSave(f); }}>
+      <div className="mb-6"><h1 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-2"><span className="text-cyan-300">{Ic("building2", { size: 22 })}</span> {t("set_title")}</h1><p className="text-[var(--text-muted)] text-sm mt-1">{t("set_subtitle")}</p></div>
+      <form className="space-y-4 rounded-2xl border border-[var(--border-app)] bg-[var(--bg-panel)] p-5" onSubmit={(e) => { e.preventDefault(); if (valid) onSave(f); }}>
         <Field label={t("auth_companyName")}><input className={inputCls} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></Field>
         <Field label={t("set_activity")}><input className={inputCls} value={f.activity} onChange={e => setF({ ...f, activity: e.target.value })} /></Field>
         <div className="grid grid-cols-2 gap-3">
@@ -2298,7 +2430,7 @@ function SettingsPanel({ company, onSave, onResetClick }) {
       </form>
       <div className="mt-6 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-5">
         <div className="font-bold text-rose-300 mb-1">{t("set_dangerTitle")}</div>
-        <p className="text-sm text-slate-400 mb-3">{t("set_dangerBody")}</p>
+        <p className="text-sm text-[var(--text-secondary)] mb-3">{t("set_dangerBody")}</p>
         <DangerBtn onClick={onResetClick}>{Ic("trash", { size: 15 })} {t("set_resetAll")}</DangerBtn>
       </div>
     </div>

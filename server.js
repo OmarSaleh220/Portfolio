@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   id TEXT PRIMARY KEY, date TEXT, memo TEXT, currency TEXT, exchangeRate REAL
 );
 CREATE TABLE IF NOT EXISTS transaction_lines (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, txId TEXT, accountId TEXT, desc TEXT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT, txId TEXT, accountId TEXT, bankId TEXT, desc TEXT,
   debit REAL DEFAULT 0, credit REAL DEFAULT 0,
   FOREIGN KEY (txId) REFERENCES transactions(id) ON DELETE CASCADE
 );
@@ -206,7 +206,7 @@ function readData() {
   const transactions = all("SELECT * FROM transactions").map(tx => ({
     id: tx.id, date: tx.date, memo: tx.memo,
     currency: tx.currency || undefined, exchangeRate: tx.exchangeRate || undefined,
-    lines: txLines.filter(l => l.txId === tx.id).map(l => ({ accountId: l.accountId, desc: l.desc || "", debit: l.debit, credit: l.credit })),
+    lines: txLines.filter(l => l.txId === tx.id).map(l => ({ accountId: l.accountId, bankId: l.bankId || undefined, desc: l.desc || "", debit: l.debit, credit: l.credit })),
   }));
 
   const attendance = all("SELECT * FROM attendance");
@@ -273,10 +273,10 @@ function writeData(obj) {
     });
 
     const insTx = db.prepare("INSERT INTO transactions (id, date, memo, currency, exchangeRate) VALUES (?, ?, ?, ?, ?)");
-    const insTxLine = db.prepare("INSERT INTO transaction_lines (txId, accountId, desc, debit, credit) VALUES (?, ?, ?, ?, ?)");
+    const insTxLine = db.prepare("INSERT INTO transaction_lines (txId, accountId, bankId, desc, debit, credit) VALUES (?, ?, ?, ?, ?, ?)");
     (obj.transactions || []).forEach(tx => {
       insTx.run(tx.id, tx.date, tx.memo, tx.currency || null, tx.exchangeRate != null ? Number(tx.exchangeRate) : null);
-      (tx.lines || []).forEach(l => insTxLine.run(tx.id, l.accountId, l.desc || "", Number(l.debit) || 0, Number(l.credit) || 0));
+      (tx.lines || []).forEach(l => insTxLine.run(tx.id, l.accountId, l.bankId || null, l.desc || "", Number(l.debit) || 0, Number(l.credit) || 0));
     });
 
     const insAtt = db.prepare("INSERT INTO attendance (id, employeeId, date, checkIn, checkOut, status) VALUES (?, ?, ?, ?, ?, ?)");
